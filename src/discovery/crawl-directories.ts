@@ -1,3 +1,4 @@
+import { NS } from '@ns';
 const foundFiles = {};
 let seen = [];
 const ignoreFilePaths = [
@@ -20,8 +21,10 @@ function recursiveScan(ns, host) {
   return null;
 }
 
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+
+
+
+export async function main(ns : NS) : Promise<void> {
   seen = ['darkweb'].concat(ns.getPurchasedServers());
   recursiveScan(ns, 'home');
   ns.tprint(`${Object.keys(foundFiles).length} hosts with interesting files`);

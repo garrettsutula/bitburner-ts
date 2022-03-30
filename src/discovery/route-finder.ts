@@ -1,3 +1,4 @@
+import { NS } from '@ns'
 const foundPaths = [];
 const seen = [];
 
@@ -15,8 +16,9 @@ function recursiveScan(ns, host, targetHost, networkSignature) {
   return null;
 }
 
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+
+
+export async function main(ns : NS) : Promise<void> {
   const [targetHost] = ns.args;
   recursiveScan(ns, 'home', targetHost, '');
   ns.tprint(`Found paths to host:

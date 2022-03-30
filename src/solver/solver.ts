@@ -1,3 +1,19 @@
+import { NS } from '@ns'
+
+export async function main(ns : NS) : Promise<void> {
+  const contracts = JSON.parse(ns.read('/data/controlledHosts.txt')).flatMap((server) => {
+    const onServer = ns.ls(server, '.cct').map((contract) => {
+      const type = ns.codingcontract.getContractType(contract, server);
+      const data = ns.codingcontract.getData(contract, server);
+      const didSolve = solve(type, data, server, contract, ns);
+      return `${server} - ${contract} - ${type} - ${didSolve || 'FAILED!'}`;
+    });
+    return onServer;
+  });
+  ns.tprint(`Found ${contracts.length} contracts`);
+  contracts.forEach((contract) => ns.tprint(contract));
+}
+
 // ALGORITHMIC STOCK TRADER
 
 function maxProfit(arrayData) {
@@ -280,18 +296,4 @@ function solve(type, data, server, contract, ns) {
       throw new Error(`Unknown case: ${type}`);
   }
   return (solution !== '') ? ns.codingcontract.attempt(solution, contract, server, [true]) : '';
-}
-
-export function main(ns) {
-  const contracts = JSON.parse(ns.read('/data/controlledHosts.txt')).flatMap((server) => {
-    const onServer = ns.ls(server, '.cct').map((contract) => {
-      const type = ns.codingcontract.getContractType(contract, server);
-      const data = ns.codingcontract.getData(contract, server);
-      const didSolve = solve(type, data, server, contract, ns);
-      return `${server} - ${contract} - ${type} - ${didSolve || 'FAILED!'}`;
-    });
-    return onServer;
-  });
-  ns.tprint(`Found ${contracts.length} contracts`);
-  contracts.forEach((contract) => ns.tprint(contract));
 }

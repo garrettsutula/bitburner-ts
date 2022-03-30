@@ -1,11 +1,8 @@
-/** @param {import("..").NS } ns */
-export async function main(ns) {
-  ns.disableLog('disableLog');
-  ns.disableLog('getServerMaxMoney');
-  ns.disableLog('getServerMoneyAvailable');
-  ns.disableLog('getServerMinSecurityLevel');
-  ns.disableLog('getServerSecurityLevel');
-  ns.disableLog('sleep');
+import { NS } from '@ns'
+import { disableLogs } from 'lib/logs';
+
+export async function main(ns : NS) : Promise<void> {
+
   const [target] = ns.args;
   const serverInitialMoney = ns.getServerMoneyAvailable(target);
   const serverMaxMoney = ns.getServerMaxMoney(target);

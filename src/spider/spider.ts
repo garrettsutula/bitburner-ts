@@ -1,3 +1,4 @@
+import { NS } from '@ns'
 // Managed by spider.js
 const discoveredHosts = new Set();
 const rootedHosts = new Set();
@@ -64,8 +65,7 @@ async function spider(ns) {
   await ns.write('/data/controlledHosts.txt', JSON.stringify(Array.from(controlledHosts.values())), 'w');
 }
 
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+export async function main(ns : NS) : Promise<void> {
   ns.disableLog('sleep');
   ns.disableLog('getHackingLevel');
   ns.disableLog('getServerRequiredHackingLevel');

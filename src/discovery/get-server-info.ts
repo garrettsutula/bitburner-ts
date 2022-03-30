@@ -1,5 +1,6 @@
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+import { NS } from '@ns'
+
+export async function main(ns : NS) : Promise<void> {
   const i = ns.args[0] || 0;
   const connectedServers = await ns.scan();
   if (i > 0) connectedServers.shift();
@@ -16,5 +17,5 @@ export async function main(ns) {
     // eslint-disable-next-line no-return-assign
     allServerInfo = allServerInfo.concat(Object.keys(serverInfo).reduce((info, key) => info += `| ${serverInfo[key].toString().padEnd(15, ' ')}|`, ''), '\r\n');
   }
-  ns.write('server-info.txt', allServerInfo, 'w');
+  await ns.write('server-info.txt', allServerInfo, 'w');
 }

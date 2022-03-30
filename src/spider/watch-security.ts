@@ -1,9 +1,8 @@
-/** @param {import("..").NS } ns */
-export async function main(ns) {
-  ns.disableLog('disableLog');
-  ns.disableLog('getServerMinSecurityLevel');
-  ns.disableLog('getServerSecurityLevel');
-  ns.disableLog('sleep');
+import { NS } from '@ns'
+import { disableLogs } from 'lib/logs';
+
+export async function main(ns : NS) : Promise<void> {
+  disableLogs(ns);
   const [target] = ns.args;
   const initialSecurityLevel = ns.getServerSecurityLevel(target);
   const securityThresh = ns.getServerMinSecurityLevel(target) + 3;

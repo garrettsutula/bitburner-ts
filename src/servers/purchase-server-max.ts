@@ -1,5 +1,6 @@
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+import { NS } from '@ns'
+
+export async function main(ns : NS) : Promise<void> {
   const intervalSeconds = 30 * 10;
   ns.disableLog('sleep');
   ns.disableLog('getServerMoneyAvailable');

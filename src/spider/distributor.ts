@@ -26,7 +26,6 @@ let newGrows = [];
 let newWeakens = [];
 const minHomeRamAvailable = 32;
 
-
 async function killHacks(ns, host) {
   ns.scriptKill(scriptPaths.hack, host);
   ns.scriptKill(scriptPaths.grow, host);
@@ -229,7 +228,8 @@ async function weaken(ns, host, controlledHostsWithMetadata) {
   }
 }
 
-export async function main(ns: NS): Promise<void> {
+
+export async function main(ns : NS) : Promise<void> {
   ns.disableLog('disableLog');
   ns.disableLog('getServerSecurityLevel');
   ns.disableLog('getServerMinSecurityLevel');

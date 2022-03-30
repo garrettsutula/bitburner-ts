@@ -1,5 +1,6 @@
-/** @param {import("..").NS } ns */
-export async function main(ns) {
+import { NS } from '@ns'
+
+export async function main(ns : NS) : Promise<void> {
   const [target] = ns.args;
   const stats = {};
   stats.minLevel = ns.getServerMinSecurityLevel(target);
@@ -12,5 +13,5 @@ export async function main(ns) {
   Minimum Security Level: ${stats.minLevel}
   Max Cash: ${stats.maxCash}
   Current Cash: ${stats.currentCash}`);
-  ns.write(`/stats/${target}.txt`, JSON.stringify(stats), 'w');
+  await ns.write(`/stats/${target}.txt`, JSON.stringify(stats), 'w');
 }
