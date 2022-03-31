@@ -1,12 +1,12 @@
 import { NS } from '@ns';
 import { shortId } from 'lib/uuid';
-import { readJson } from 'lib/file';
+import { readJson, writeJson } from 'lib/file';
 import { disableLogs } from 'lib/logs';
 import { RunningProcesses } from 'models/process';
 import { ControlledServers, ServerNotification } from 'models/server';
 import { killProcesses, scheduleAcrossHosts } from 'lib/process';
 import { Process } from 'models/process';
-//
+
 const scriptPaths = {
   touch: '/spider/touch.js',
   hack: '/spider/hack.js',
@@ -18,6 +18,10 @@ const scriptPaths = {
   spider: '/spider/spider.js',
 };
 const minHomeRamAvailable = 32;
+
+async function recycleDistributor(ns: NS, runningProcesses: RunningProcesses) {
+  return writeJson(ns, '/data/distributorState.txt', runningProcesses);
+}
 
 async function killHacks(ns: NS, host: string) {
   if (host === 'home') {
@@ -43,16 +47,20 @@ function getControlledHostsWithMetadata(ns: NS, hosts: string[]): ControlledServ
   });
 }
 
-async function awaitAndProcessNotifications(ns: NS, notifications: Set<ServerNotification>): Promise<void> {
+async function awaitAndProcessNotifications(ns: NS, notifications: Set<ServerNotification>, runningProcesses: RunningProcesses): Promise<void> {
   let count = 1;
+  let recycle = false;
   while (ns.ls('home', '.notification.txt').length === 0 && count < 5) {
     await ns.sleep(5000);
     count += 1;
   }
   ns.ls('home', '.notification.txt').forEach((filePath) => {
-    notifications.add(readJson(ns, filePath) as ServerNotification);
+    const notification = readJson(ns, filePath) as ServerNotification;
+    if (notification.host === 'home' && notification.status === 'recycle') recycle = true;
+    notifications.add(notification);
     ns.rm(filePath);
   });
+  if (recycle) await recycleDistributor(ns, runningProcesses);
 }
 
 function isCurrentTarget(host: string, runningProcesses: RunningProcesses) {
@@ -72,23 +80,26 @@ async function hack(ns: NS, host: string, controlledHostsWithMetadata: Controlle
     && !isBelowMoneyThreshold
     && isAlreadyWeakened
   ) {
-    for (let i = 0; controlledHostsWithMetadata.length > 0 && i < 5; i += 1) {
-      const processTag = shortId();
-      await ns.sleep(30);
-      newProcesses.push(
-        ...(await scheduleAcrossHosts(ns, controlledHostsWithMetadata, scriptPaths.hack, 6, host, processTag)),
-        ...(await scheduleAcrossHosts(ns, controlledHostsWithMetadata, scriptPaths.weaken, 1, host, processTag)),
-      );
-    }
+    const hackAmountNeeded = serverMoneyAvailable - (serverMaxMoney * 0.45);
+    const hackThreadsNeeded = Math.ceil(ns.hackAnalyzeThreads(host, hackAmountNeeded)) / 4 || 1;
+    const weakenThreadsNeeded = Math.ceil(hackThreadsNeeded / (6 * 4)) || 1;
+    const processTag = shortId();
+
+    newProcesses.push(
+      ...(await scheduleAcrossHosts(ns, controlledHostsWithMetadata, scriptPaths.hack, hackThreadsNeeded, host, processTag)),
+      ...(await scheduleAcrossHosts(ns, controlledHostsWithMetadata, scriptPaths.weaken, weakenThreadsNeeded, host, processTag)),
+    );
+
     if (newProcesses.length) {
       ns.print(`
       *************************
       **** NEW HACK TARGET ****
       \tHost: ${host}
       \tAvailable Money: ${serverMoneyAvailable.toFixed(0)}
-      \tExpected Earnings: ${(serverMaxMoney * 0.6) - (serverMaxMoney * 0.5)}
+      \tExpected Earnings: ${(serverMoneyAvailable) - (serverMaxMoney * 0.45)}
+      \tGrow threads needed: ${Math.ceil(hackThreadsNeeded)}
       *************************`);
-      await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchHack, 1, host, 'hack-stage');
+      await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchHack, 1, host, processTag);
       
     }
   }
@@ -109,8 +120,8 @@ async function grow(ns: NS, host: string, controlledHostsWithMetadata: Controlle
     && isAlreadyWeakened
   ) {
     const growthAmountNeeded = (serverMaxMoney * 0.90) / serverMoneyAvailable;
-    const growThreadsNeeded = Math.ceil(ns.growthAnalyze(host, growthAmountNeeded) / 18) || 1;
-    const weakenThreadsNeeded = Math.ceil(growThreadsNeeded / (18 * 6)) || 1;
+    const growThreadsNeeded = Math.ceil(ns.growthAnalyze(host, growthAmountNeeded)) / 4 || 1;
+    const weakenThreadsNeeded = Math.ceil(growThreadsNeeded / (6 * 4)) || 1;
 
 
     const processTag = shortId();
@@ -125,9 +136,9 @@ async function grow(ns: NS, host: string, controlledHostsWithMetadata: Controlle
       \tHost: ${host}
       \tAvailable Money: ${serverMoneyAvailable.toFixed(0)}
       \tMax Money: ${serverMaxMoney}
-      \tNeed to Grow by (60% of Max): ${((serverMaxMoney * 0.6) / serverMoneyAvailable).toFixed(2)}
+      \tNeed to Grow by: ${((serverMaxMoney * 0.90) / serverMoneyAvailable).toFixed(2)}
       \tGrow threads needed: ${Math.ceil(growThreadsNeeded)}
-      \tStarting grow threads (1/18th speed): ${Math.ceil(growThreadsNeeded / 18)}
+      \tStarting grow threads: ${Math.ceil(growThreadsNeeded)}
       *************************`);
       await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchGrowth, 1, host, processTag);
 
@@ -147,8 +158,8 @@ async function weaken(ns: NS, host: string, controlledHostsWithMetadata: Control
     && serverMaxMoney > 0
   ) {
     // Spawn tons of weaken processes so it only needs to execute as few iterations as possible.
-    const weakenThreadCount = Math.floor(
-      (currentSecurityLevel - minimumSecurityLevel) / 0.05,
+    const weakenThreadCount = Math.ceil(
+      ((currentSecurityLevel - minimumSecurityLevel) / 0.05) / 4
     );
     const processTag = shortId();
     newProcesses.push(
@@ -171,12 +182,14 @@ async function weaken(ns: NS, host: string, controlledHostsWithMetadata: Control
 
 
 export async function main(ns : NS) : Promise<void> {
+  const restoreState = ns.args[0];
   // Set by the "watch" scripts, cleared by the distributor.
   const notifications = new Set<ServerNotification>();
-  const runningProcesses = new RunningProcesses();
+  const runningProcesses = restoreState ? readJson(ns, '/data/distributorState.txt') as RunningProcesses : new RunningProcesses();
+  ns.rm('/data/distributorState.txt');
   disableLogs(ns);
   let count = 1;
-  let includedHostCount = 5;
+  const includedHostCount = 18;
 
   let rootedHosts = readJson(ns, '/data/rootedHosts.txt') as string[];
   let controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
@@ -191,7 +204,7 @@ export async function main(ns : NS) : Promise<void> {
     const newHacks = []
 
     // Ramp up by slicing the array with an includedHostCount that is incremented by an algorithm below.
-    rootedHosts = readJson(ns, '/data/rootedHosts.txt').slice(0, includedHostCount);
+    rootedHosts = readJson(ns, '/data/rootedHosts.txt').reverse().slice(0, includedHostCount);
     controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
@@ -277,10 +290,6 @@ export async function main(ns : NS) : Promise<void> {
     `);
     }
     count += 1;
-    if (count % 10 === 0) {
-      ns.tprint('Increasing target host count.');
-      includedHostCount += 1;
-    }
-    await awaitAndProcessNotifications(ns, notifications);
+    await awaitAndProcessNotifications(ns, notifications, runningProcesses);
   }
 }

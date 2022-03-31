@@ -5,5 +5,5 @@ export interface ControlledServers {
 
 export interface ServerNotification {
   host: string;
-  status: 'rooted' | 'weakened' | 'grown' | 'hacked';
+  status: 'recycle' | 'rooted' | 'weakened' | 'grown' | 'hacked';
 }
