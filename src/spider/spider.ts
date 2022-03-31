@@ -1,11 +1,12 @@
 import { NS } from '@ns'
+import { writeJson } from 'lib/file';
+import { disableLogs } from 'lib/logs';
 // Managed by spider.js
-const discoveredHosts = new Set();
-const rootedHosts = new Set();
-const controlledHosts = new Set();
+const discoveredHosts = new Set<string>();
+const rootedHosts = new Set<string>();
+const controlledHosts = new Set<string>();
 
-/** @param {import("..").NS } ns */
-function prep(ns, target) {
+function prep(ns: NS, target: string) {
   const requiredHackingLevel = ns.getServerRequiredHackingLevel(target);
   const currentHackingLevel = ns.getHackingLevel();
   if (requiredHackingLevel
@@ -39,8 +40,7 @@ function prep(ns, target) {
   return false;
 }
 
-/** @param {import("..").NS } ns */
-async function spider(ns) {
+async function spider(ns: NS) {
   discoveredHosts.clear();
   rootedHosts.clear();
   controlledHosts.clear();
@@ -60,16 +60,13 @@ async function spider(ns) {
       }
     }
   }
-  await ns.write('/data/discoveredHosts.txt', JSON.stringify(Array.from(discoveredHosts.values())), 'w');
-  await ns.write('/data/rootedHosts.txt', JSON.stringify(Array.from(rootedHosts.values())), 'w');
-  await ns.write('/data/controlledHosts.txt', JSON.stringify(Array.from(controlledHosts.values())), 'w');
+  await writeJson('/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
+  await writeJson('/data/rootedHosts.txt', Array.from(rootedHosts.values()));
+  await writeJson('/data/controlledHosts.txt', Array.from(controlledHosts.values()));
 }
 
-export async function main(ns : NS) : Promise<void> {
-  ns.disableLog('sleep');
-  ns.disableLog('getHackingLevel');
-  ns.disableLog('getServerRequiredHackingLevel');
-  ns.disableLog('scan');
+export async function main(ns: NS) : Promise<void> {
+  disableLogs();
 
   while (true) {
     await spider(ns);

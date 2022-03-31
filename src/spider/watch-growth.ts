@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { disableLogs } from '/lib/logs';
+import { disableLogs } from 'lib/logs';
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs();

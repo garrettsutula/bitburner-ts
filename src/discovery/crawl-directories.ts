@@ -8,7 +8,6 @@ const ignoreFilePaths = [
   'file-list.txt',
 ];
 
-/** @param {import("..").NS } ns */
 function recursiveScan(ns, host) {
   const filePaths = ns.ls(host);
   const specialFiles = filePaths

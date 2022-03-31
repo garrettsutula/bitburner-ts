@@ -1,24 +1,23 @@
 import { NS } from '@ns';
 
-export function disableLogs(ns: NS) {
+export function disableLogs(ns: NS): void {
   ns.disableLog('disableLog');
+  // Hacking
+  ns.disableLog('getHackingLevel');
+  ns.disableLog('getServerRequiredHackingLevel');
   ns.disableLog('getServerMinSecurityLevel');
   ns.disableLog('getServerSecurityLevel');
-  ns.disableLog('sleep');
-  ns.disableLog('disableLog');
+  // Server Money
   ns.disableLog('getServerMaxMoney');
   ns.disableLog('getServerMoneyAvailable');
-  ns.disableLog('getServerMinSecurityLevel');
-  ns.disableLog('getServerSecurityLevel');
+  // Server RAM
+  ns.disableLog('getServerUsedRam');
+  ns.disableLog('getServerMaxRam');
+  // Commands
+  ns.disableLog('scan');
+  ns.disableLog('scp');
+  ns.disableLog('exec');
+  ns.disableLog('kill');
+  ns.disableLog('killall');
   ns.disableLog('sleep');
-  ns.disableLog('disableLog');
-  ns.disableLog('getServerMaxMoney');
-  ns.disableLog('getServerMoneyAvailable');
-  ns.disableLog('getServerMinSecurityLevel');
-  ns.disableLog('getServerSecurityLevel');
-  ns.disableLog('sleep');
-}
-
-export async function main(ns : NS) : Promise<void> {
-  //
 }

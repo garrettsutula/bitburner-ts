@@ -2,7 +2,6 @@ import { NS } from '@ns'
 const foundPaths = [];
 const seen = [];
 
-/** @param {import("..").NS } ns */
 function recursiveScan(ns, host, targetHost, networkSignature) {
   networkSignature += `${networkSignature.length ? '.' : ''}${host}`;
   if (host === targetHost) {
