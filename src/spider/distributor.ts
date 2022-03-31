@@ -2,10 +2,12 @@ import { NS } from '@ns';
 import { shortId } from 'lib/uuid';
 import { readJson } from 'lib/file';
 import { disableLogs } from 'lib/logs';
-import { HostProcesses, RunningProcesses } from 'models/process';
-import { ControlledServers } from 'models/server';
+import { RunningProcesses } from 'models/process';
+import { ControlledServers, ServerNotification } from 'models/server';
 import { killProcesses, scheduleAcrossHosts } from 'lib/process';
-
+import { Server } from 'http';
+import { Process } from 'models/process';
+//
 const scriptPaths = {
   touch: '/spider/touch.js',
   hack: '/spider/hack.js',
@@ -21,7 +23,7 @@ const minHomeRamAvailable = 32;
 async function killHacks(ns: NS, host: string) {
   if (host === 'home') {
     Object.values(scriptPaths).forEach((scriptPath) => {
-      ns.scriptKill(scriptPath, home);
+      ns.scriptKill(scriptPath, 'home');
     })
   } else {
     ns.killall(host);
@@ -43,14 +45,14 @@ function getControlledHostsWithMetadata(ns: NS, hosts: string[]): ControlledServ
   });
 }
 
-async function awaitAndProcessNotifications(ns: NS, notifications: Set<string>): Promise<void> {
+async function awaitAndProcessNotifications(ns: NS, notifications: Set<ServerNotification>): Promise<void> {
   let count = 1;
   while (ns.ls('home', '.notification.txt').length === 0 && count < 5) {
     await ns.sleep(5000);
     count += 1;
   }
   ns.ls('home', '.notification.txt').forEach((filePath) => {
-    notifications.add(readJson(filePath));
+    notifications.add(readJson(ns, filePath) as ServerNotification);
     ns.rm(filePath);
   });
 }
@@ -59,19 +61,19 @@ function isCurrentTarget(host: string, runningProcesses: RunningProcesses) {
   return runningProcesses.weakening.has(host) || runningProcesses.growing.has(host) || runningProcesses.hacking.has(host);
 }
 
-async function hack(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers): Promise<HostProcesses> {
+async function hack(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers[]): Promise<Process[]> {
   const serverMaxMoney = ns.getServerMaxMoney(host);
   const serverMoneyAvailable = ns.getServerMoneyAvailable(host);
   const currentSecurityLevel = ns.getServerSecurityLevel(host);
   const minimumSecurityLevel = ns.getServerMinSecurityLevel(host);
   const isBelowMoneyThreshold = serverMoneyAvailable < 0.90 * serverMaxMoney;
   const isAlreadyWeakened = currentSecurityLevel < 3 + minimumSecurityLevel;
+  const newProcesses = [];
   if (
     serverMaxMoney > 0
     && !isBelowMoneyThreshold
     && isAlreadyWeakened
   ) {
-    const newProcesses = [];
     for (let i = 0; controlledHostsWithMetadata.length > 0 && i < 5; i += 1) {
       const processTag = shortId();
       await ns.sleep(30);
@@ -89,18 +91,20 @@ async function hack(ns: NS, host: string, controlledHostsWithMetadata: Controlle
       \tExpected Earnings: ${(serverMaxMoney * 0.6) - (serverMaxMoney * 0.5)}
       *************************`);
       await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchHack, 1, host, 'hack-stage');
-      return newProcesses;
+      
     }
   }
+  return newProcesses;
 }
 
-async function grow(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers): Promise<HostProcesses> {
+async function grow(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers[]): Promise<Process[]> {
   const serverMaxMoney = ns.getServerMaxMoney(host);
   const serverMoneyAvailable = ns.getServerMoneyAvailable(host);
   const currentSecurityLevel = ns.getServerSecurityLevel(host);
   const minimumSecurityLevel = ns.getServerMinSecurityLevel(host);
   const isBelowMoneyThreshold = serverMoneyAvailable < 0.90 * serverMaxMoney;
   const isAlreadyWeakened = currentSecurityLevel < 3 + minimumSecurityLevel;
+  const newProcesses = [];
   if (
     serverMaxMoney > 0
     && isBelowMoneyThreshold
@@ -109,7 +113,7 @@ async function grow(ns: NS, host: string, controlledHostsWithMetadata: Controlle
     const growthAmountNeeded = (serverMaxMoney * 0.90) / serverMoneyAvailable;
     const growThreadsNeeded = Math.ceil(ns.growthAnalyze(host, growthAmountNeeded) / 18) || 1;
     const weakenThreadsNeeded = Math.ceil(growThreadsNeeded / (18 * 6)) || 1;
-    const newProcesses = [];
+
 
     const processTag = shortId();
     newProcesses.push(
@@ -128,21 +132,22 @@ async function grow(ns: NS, host: string, controlledHostsWithMetadata: Controlle
       \tStarting grow threads (1/18th speed): ${Math.ceil(growThreadsNeeded / 18)}
       *************************`);
       await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchGrowth, 1, host, processTag);
-      return newProcesses;
+
     }
   }
+  return newProcesses;
 }
 
-async function weaken(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers): Promise<HostProcesses> {
+async function weaken(ns: NS, host: string, controlledHostsWithMetadata: ControlledServers[]): Promise<Process[]> {
   const serverMaxMoney = ns.getServerMaxMoney(host);
   const currentSecurityLevel = ns.getServerSecurityLevel(host);
   const minimumSecurityLevel = ns.getServerMinSecurityLevel(host);
   const isAlreadyWeakened = currentSecurityLevel < 3 + minimumSecurityLevel;
+  const newProcesses = [];
   if (
     !isAlreadyWeakened
     && serverMaxMoney > 0
   ) {
-    const newProcesses = [];
     // Spawn tons of weaken processes so it only needs to execute as few iterations as possible.
     const weakenThreadCount = Math.floor(
       (currentSecurityLevel - minimumSecurityLevel) / 0.05,
@@ -161,22 +166,22 @@ async function weaken(ns: NS, host: string, controlledHostsWithMetadata: Control
       \tWeaken threads needed: ${weakenThreadCount}
       ***************************`);
       await scheduleAcrossHosts(ns, [{ host: 'home', availableRam: 99999 }], scriptPaths.watchSecurity, 1, host, processTag);
-      return newProcesses;
     }
   }
+  return newProcesses;
 }
 
 
 export async function main(ns : NS) : Promise<void> {
   // Set by the "watch" scripts, cleared by the distributor.
-  const notifications = new Set();
+  const notifications = new Set<ServerNotification>();
   const runningProcesses = new RunningProcesses();
   disableLogs(ns);
   let count = 1;
   let includedHostCount = 1;
 
-  let rootedHosts = readJson('/data/rootedHosts.txt');
-  let controlledHosts = readJson('/data/controlledHosts.txt');
+  let rootedHosts = readJson(ns, '/data/rootedHosts.txt') as string[];
+  let controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
   for (const host of controlledHosts) {
     await killHacks(ns, host);
@@ -188,32 +193,33 @@ export async function main(ns : NS) : Promise<void> {
     const newHacks = []
 
     // Ramp up by slicing the array with an includedHostCount that is incremented by an algorithm below.
-    rootedHosts = readJson('/data/rootedHosts.txt').slice(0, includedHostCount);
-    controlledHosts = readJson('/data/controlledHosts.txt');
+    rootedHosts = readJson(ns, '/data/rootedHosts.txt').slice(0, includedHostCount);
+    controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
 
     if (notifications.size) {
       notifications.forEach(({ host, status }) => {
-        const hostRunningProcesses = []
+        let hostRunningProcesses;
         switch (status) {
           case 'weakened':
             hostRunningProcesses = runningProcesses.weakening.get(host);
-            runningProcesses.weakening.clear(host);
+            runningProcesses.weakening.delete(host);
             break;
           case 'grown':
             hostRunningProcesses = runningProcesses.growing.get(host);
-            runningProcesses.growing.clear(host);
+            runningProcesses.growing.delete(host);
             break;
           case 'hacked':
             hostRunningProcesses = runningProcesses.hacking.get(host);
-            runningProcesses.hacking.clear(host);
+            runningProcesses.hacking.delete(host);
             break;
           default:
             ns.tprint(`Unknown notification status from ${host}: ${status}`);
         }
-
-        killProcesses(ns, hostRunningProcesses);
+        if (hostRunningProcesses && hostRunningProcesses.length) {
+          killProcesses(ns, hostRunningProcesses);
+        }
       });
       notifications.clear();
     }
@@ -261,9 +267,9 @@ export async function main(ns : NS) : Promise<void> {
       \t*******************************************
       \t***********  CURRENT TARGETS  *************
       \t*******************************************
-      \tCurrent Weaken Targets: ${Array.from(weakeningHosts.values()).join(', ')}
-      \tCurrent Grow Targets: ${Array.from(growingHosts.values()).join(', ')}
-      \tCurrent Hacks Targets: ${Array.from(hackingHosts.values()).join(', ')}
+      \tCurrent Weaken Targets: ${Object.keys(runningProcesses.weakening).join(', ')}
+      \tCurrent Grow Targets: ${Object.keys(runningProcesses.growing).join(', ')}
+      \tCurrent Hacks Targets: ${Object.keys(runningProcesses.hacking).join(', ')}
       \t*************  NEW TARGETS  ***************
       \t*******************************************
       \tNew Weaken Targets: ${newWeakens.join(', ')}
@@ -271,9 +277,6 @@ export async function main(ns : NS) : Promise<void> {
       \tNew Hacks Targets: ${newHacks.join(', ')}
       \t*******************************************
     `);
-      newHacks = [];
-      newGrows = [];
-      newWeakens = [];
     }
     count += 1;
     if (count % 3 === 0) {
@@ -282,6 +285,6 @@ export async function main(ns : NS) : Promise<void> {
     } else {
       includedHostCount += 1;
     }
-    await awaitAndProcessNotifications(ns);
+    await awaitAndProcessNotifications(ns, notifications);
   }
 }

@@ -3,7 +3,7 @@ import { disableLogs } from 'lib/logs';
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  const [target] = ns.args;
+  const target = ns.args[0].toString();
   const initialSecurityLevel = ns.getServerSecurityLevel(target);
   const securityThresh = ns.getServerMinSecurityLevel(target) + 3;
   while ((ns.getServerSecurityLevel(target) > securityThresh)) {

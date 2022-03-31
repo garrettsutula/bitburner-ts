@@ -3,7 +3,7 @@ import { disableLogs } from 'lib/logs';
 
 export async function main(ns : NS) : Promise<void> {
 
-  const [target] = ns.args;
+  const target = ns.args[0].toString();
   const serverInitialMoney = ns.getServerMoneyAvailable(target);
   const serverMaxMoney = ns.getServerMaxMoney(target);
   const moneyThresh = 0.50 * serverMaxMoney;

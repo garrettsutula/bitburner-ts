@@ -4,17 +4,17 @@ import { Process } from 'models/process'
 import { ControlledServers } from 'models/server';
 
 export function killProcesses(ns: NS, processes: Process[]): boolean[] {
-  return processes.map(({ host, script, args }) => ns.kill(script, host, ...args));
+  return processes.map(({ host, script, args }: {host: string, script: string, args: any[]}) => ns.kill(script, host, ...args));
 }
 
 export async function scheduleAcrossHosts(
   ns: NS,
-  controlledHostsWithMetadata: ControlledServers,
+  controlledHostsWithMetadata: ControlledServers[],
   jobScript: string,
   jobThreads: number,
   jobTarget: string,
   tag: string
-): HostProcesses {
+): Promise<Process[]> {
   const startedProcesses = [];
   const ramPerTask = ns.getScriptRam(jobScript, 'home');
 
@@ -25,9 +25,9 @@ export async function scheduleAcrossHosts(
     );
 
     jobThreads -= numThisHost;
-    const args = [jobScript, controlledHostsWithMetadata[0].host, numThisHost, jobTarget, tag];
+    const args = [];
     if (numThisHost > 0) {
-      await execa(ns, args);
+      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, jobTarget, tag);
       startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args: [jobTarget, tag] });
     }
 

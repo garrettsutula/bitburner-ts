@@ -2,8 +2,8 @@ import { NS } from '@ns'
 import { disableLogs } from 'lib/logs';
 
 export async function main(ns : NS) : Promise<void> {
-  disableLogs();
-  const [target] = ns.args;
+  disableLogs(ns);
+  const target = ns.args[0].toString();
   const serverMaxMoney = ns.getServerMaxMoney(target);
   const securityThresh = ns.getServerMinSecurityLevel(target) + 5;
   while (

@@ -1,8 +1,8 @@
 import { NS } from '@ns'
-const foundPaths = [];
-const seen = [];
+const foundPaths: string[] = [];
+const seen: string[] = [];
 
-function recursiveScan(ns, host, targetHost, networkSignature) {
+function recursiveScan(ns: NS, host: string, targetHost: string, networkSignature: string): any {
   networkSignature += `${networkSignature.length ? '.' : ''}${host}`;
   if (host === targetHost) {
     foundPaths.push(networkSignature);
@@ -10,7 +10,7 @@ function recursiveScan(ns, host, targetHost, networkSignature) {
   if (!seen.includes(host)) {
     seen.push(host);
     return ns.scan(host)
-      .map((childHost) => recursiveScan(ns, childHost, targetHost, networkSignature));
+      .map((childHost: string) => recursiveScan(ns, childHost, targetHost, networkSignature));
   }
   return null;
 }
@@ -18,7 +18,7 @@ function recursiveScan(ns, host, targetHost, networkSignature) {
 
 
 export async function main(ns : NS) : Promise<void> {
-  const [targetHost] = ns.args;
+  const targetHost = ns.args[0].toString();
   recursiveScan(ns, 'home', targetHost, '');
   ns.tprint(`Found paths to host:
   ${foundPaths.join('\n')}

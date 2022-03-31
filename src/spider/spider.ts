@@ -20,7 +20,7 @@ function prep(ns: NS, target: string) {
     controlledHosts.add(target);
     return true;
   }
-  function can(action) {
+  function can(action: string) {
     return ns.fileExists(`${action}.exe`, 'home');
   }
 
@@ -45,14 +45,13 @@ async function spider(ns: NS) {
   rootedHosts.clear();
   controlledHosts.clear();
   const purchasedServers = ns.getPurchasedServers();
-  let hosts = [];
+  let hosts: string[] = [];
   const seen = ['darkweb'].concat(purchasedServers);
   hosts.push('home');
   ['home'].concat(purchasedServers).forEach((host) => controlledHosts.add(host));
   while (hosts.length > 0) {
     const host = hosts.shift();
-
-    if (!seen.includes(host)) {
+    if (host && !seen.includes(host)) {
       seen.push(host);
       // If we can root the host, scan and add the hosts we find to the hosts crawl list.
       if (host === 'home' || prep(ns, host)) {
@@ -60,13 +59,13 @@ async function spider(ns: NS) {
       }
     }
   }
-  await writeJson('/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
-  await writeJson('/data/rootedHosts.txt', Array.from(rootedHosts.values()));
-  await writeJson('/data/controlledHosts.txt', Array.from(controlledHosts.values()));
+  await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
+  await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
+  await writeJson(ns, '/data/controlledHosts.txt', Array.from(controlledHosts.values()));
 }
 
 export async function main(ns: NS) : Promise<void> {
-  disableLogs();
+  disableLogs(ns);
 
   while (true) {
     await spider(ns);

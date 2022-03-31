@@ -6,18 +6,14 @@ export interface Process {
   args: Array<string | number>
 }
 
-export interface HostProcesses {
-  [index: number]: Process
-}
-
 export interface RunningProcessesInterface {
-  weakening: Map<string, HostProcesses>
-  growing: Map<string, HostProcesses>
-  hacking: Map<string, HostProcesses>
+  weakening: Map<string, Process[]>
+  growing: Map<string, Process[]>
+  hacking: Map<string, Process[]>
 }
 
 export class RunningProcesses implements RunningProcessesInterface {
-  weakening = new Map<string, HostProcesses>();
-  growing = new Map<string, HostProcesses>();
-  hacking = new Map<string, HostProcesses>();
+  weakening = new Map<string, Process[]>();
+  growing = new Map<string, Process[]>();
+  hacking = new Map<string, Process[]>();
 }
