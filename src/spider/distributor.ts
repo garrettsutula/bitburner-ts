@@ -27,7 +27,6 @@ async function killHacks(ns: NS, host: string) {
   } else {
     ns.killall(host);
     await ns.scp(ns.ls('home', '/spider'), 'home', host);
-    await ns.scp(ns.ls('home', '/utils'), 'home', host);
   }
 }
 
@@ -177,7 +176,7 @@ export async function main(ns : NS) : Promise<void> {
   const runningProcesses = new RunningProcesses();
   disableLogs(ns);
   let count = 1;
-  let includedHostCount = 1;
+  let includedHostCount = 5;
 
   let rootedHosts = readJson(ns, '/data/rootedHosts.txt') as string[];
   let controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
@@ -278,7 +277,7 @@ export async function main(ns : NS) : Promise<void> {
     `);
     }
     count += 1;
-    if (count % 3 === 0) {
+    if (count % 10 === 0) {
       ns.tprint('Increasing target host count.');
       includedHostCount += 1;
     }
