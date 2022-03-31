@@ -252,6 +252,96 @@ function mergeOverlap(intervals: Array<Array<number>>) {
   return intervals;
 }
 
+function totalSums(number: number) {
+  const N = number;
+  const K = number - 1;
+
+     
+    // Initialize a list
+    const dp = Array.from({length: N +1}, (_, i) => 0);
+   
+    // Update dp[0] to 1
+    dp[0] = 1;
+ 
+    // Iterate over the range [1, K + 1]
+    for(let row = 1; row < K + 1; row++)
+    {
+ 
+        // Iterate over the range [1, N + 1]
+        for(let col = 1; col < N + 1; col++)
+        {
+             
+            // If col is greater
+            // than or equal to row
+            if (col >= row)
+               
+                // Update current
+                // dp[col] state
+                dp[col] = dp[col] + dp[col - row];
+          }
+    }
+ 
+    // Return the total number of ways
+    return(dp[N]);
+}
+
+function getExpressions(res: string[], curExp: string, input: string, target: number, pos: number, curVal: number, last: number) {
+
+        // true if whole input is processed with some
+        // operators
+        if (pos == input.length)
+        {
+            // if current value is equal to target
+            //then only add to final solution
+            // if question is : all possible o/p then just
+            //push_back without condition
+            if (curVal == target)
+                res.push(curExp);
+            return;
+        }
+ 
+        // loop to put operator at all positions
+        for (let i = pos; i < input.length; i++)
+        {
+            // ignoring case which start with 0 as they
+            // are useless for evaluation
+            if (i != pos && input[pos] == '0')
+                break;
+ 
+            // take part of input from pos to i
+            const part = input.substr(pos, i + 1 - pos);
+ 
+            // take numeric value of part
+            const cur = parseInt(part, 10);
+ 
+            // if pos is 0 then just send numeric value
+            // for next recursion
+            if (pos == 0)
+            getExpressions(res, curExp + part, input,
+                         target, i + 1, cur, cur);
+ 
+ 
+            // try all given binary operator for evaluation
+            else
+            {
+              getExpressions(res, curExp + "+" + part, input,
+                         target, i + 1, curVal + cur, cur);
+              getExpressions(res, curExp + "-" + part, input,
+                         target, i + 1, curVal - cur, -cur);
+              getExpressions(res, curExp + "*" + part, input,
+                         target, i + 1, curVal - last + last * cur,
+                         last * cur);
+            }
+        }
+}
+
+function recursiveGetExpressions([input, target]: [input: string, target: number]) {
+  const res: string[] = [];
+  getExpressions(res, "", input, target, 0, 0, 0);
+  return res;
+}
+
+
 function solve(type: string, data: any, server: string, contract: string, ns: NS) {
   let solution;
   ns.tprint(type);
@@ -288,6 +378,12 @@ function solve(type: string, data: any, server: string, contract: string, ns: NS
       break;
     case 'Merge Overlapping Intervals':
       solution = mergeOverlap(data);
+      break;
+    case 'Total Ways to Sum':
+      solution = totalSums(data);
+      break;
+    case 'Find All Valid Math Expressions':
+      solution= recursiveGetExpressions(data);
       break;
     default:
       return '';
