@@ -5,7 +5,6 @@ import { disableLogs } from 'lib/logs';
 import { RunningProcesses } from 'models/process';
 import { ControlledServers, ServerNotification } from 'models/server';
 import { killProcesses, scheduleAcrossHosts } from 'lib/process';
-import { Server } from 'http';
 import { Process } from 'models/process';
 //
 const scriptPaths = {
@@ -267,22 +266,20 @@ export async function main(ns : NS) : Promise<void> {
       \t*******************************************
       \t***********  CURRENT TARGETS  *************
       \t*******************************************
-      \tCurrent Weaken Targets: ${Object.keys(runningProcesses.weakening).join(', ')}
-      \tCurrent Grow Targets: ${Object.keys(runningProcesses.growing).join(', ')}
-      \tCurrent Hacks Targets: ${Object.keys(runningProcesses.hacking).join(', ')}
+      \tCurrent Weaken Targets: ${Array.from(runningProcesses.weakening.keys()).join(', ') || 'n/a'}
+      \tCurrent Grow Targets: ${Array.from(runningProcesses.growing.keys()).join(', ') || 'n/a'}
+      \tCurrent Hacks Targets: ${Array.from(runningProcesses.hacking.keys()).join(', ') || 'n/a'}
       \t*************  NEW TARGETS  ***************
       \t*******************************************
-      \tNew Weaken Targets: ${newWeakens.join(', ')}
-      \tNew Grow Targets: ${newGrows.join(', ')}
-      \tNew Hacks Targets: ${newHacks.join(', ')}
+      \tNew Weaken Targets: ${newWeakens.join(', ') || 'n/a'}
+      \tNew Grow Targets: ${newGrows.join(', ') || 'n/a'}
+      \tNew Hacks Targets: ${newHacks.join(', ') || 'n/a'}
       \t*******************************************
     `);
     }
     count += 1;
     if (count % 3 === 0) {
       ns.tprint('Increasing target host count.');
-      includedHostCount += 1;
-    } else {
       includedHostCount += 1;
     }
     await awaitAndProcessNotifications(ns, notifications);
