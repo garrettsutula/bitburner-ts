@@ -1,9 +1,14 @@
-import { NS } from '@ns'
-
 export interface Process {
   host: string;
   script: string;
   args: Array<string | number>
+}
+
+export interface NewRunningProcesses {
+  host: string;
+  timeStarted: number;
+  processId: string;
+  processes: Process[];
 }
 
 export interface RunningProcessesInterface {

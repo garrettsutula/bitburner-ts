@@ -1,10 +1,11 @@
 import { NS } from '@ns'
-import { execa } from 'spider/exec';
+import { execa } from 'lib/exec';
 import { Process } from 'models/process'
 import { ControlledServers } from 'models/server';
+import { Args } from '/models/utility';
 
 export function killProcesses(ns: NS, processes: Process[]): boolean[] {
-  return processes.map(({ host, script, args }: {host: string, script: string, args: any[]}) => ns.kill(script, host, ...args));
+  return processes.map(({ host, script, args }: {host: string, script: string, args: Args}) => ns.kill(script, host, ...args));
 }
 
 export async function scheduleAcrossHosts(
@@ -13,7 +14,7 @@ export async function scheduleAcrossHosts(
   jobScript: string,
   jobThreads: number,
   jobTarget: string,
-  tag: string
+  processId: string
 ): Promise<Process[]> {
   const startedProcesses = [];
   const ramPerTask = ns.getScriptRam(jobScript, 'home');
@@ -25,10 +26,9 @@ export async function scheduleAcrossHosts(
     );
 
     jobThreads -= numThisHost;
-    const args = [];
     if (numThisHost > 0) {
-      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, jobTarget, tag);
-      startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args: [jobTarget, tag] });
+      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, jobTarget, processId);
+      startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args: [jobTarget, processId] });
     }
 
     if (jobThreads > 0) {

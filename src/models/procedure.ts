@@ -21,6 +21,7 @@ export interface QueuedProcedure {
 }
 
 export interface RunningProcedure {
+  processId: string;
   timeStarted: number;
   procedure: Procedure;
   processes: Process[];
@@ -29,6 +30,6 @@ export interface RunningProcedure {
 export interface ScheduledHost {
   host: string;
   assignedProcedure: 'prepare' | 'exploit';
-  runningProcedures: RunningProcedure[];
-  queue: boolean;
+  runningProcedures: Map<string, RunningProcedure>;
+  queued: boolean;
 }
