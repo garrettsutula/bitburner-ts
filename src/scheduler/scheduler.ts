@@ -1,6 +1,8 @@
 import { NS } from '@ns';
 import { readJson } from 'lib/file';
 import { disableLogs } from 'lib/logs';
+import { scheduleAcrossHosts } from 'lib/process';
+import { writePortJson } from '/lib/port';
 import { QueuedProcedure, ScheduledHost } from '/models/procedure';
 import { ControlledServers } from '/models/server';
 import { exploitSchedule } from '/scheduler/stages/exploit';
@@ -81,6 +83,8 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     const scheduledHostsArr = Array.from(scheduledHosts.values());
 
+    // TODO: Probably wrap these in a queue depth measure
+
     // Queue new procedure for any hosts that don't have one running already.
     const scheduledNotRunning = scheduledHostsArr
       .filter((scheduledHost) => scheduledHost.runningProcedures.length === 0);
@@ -110,6 +114,19 @@ export async function main(ns : NS) : Promise<void> {
             procedure,
           });
     }
+
+    const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
+    const totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
+
+    for (const queuedProcedure of procedureQueue) {
+      if (totalAvailableRam > queuedProcedure.procedure.totalRamNeeded) {
+        await writePortJson(ns, 1, queuedProcedure.procedure);
+        // send procedure to a port and start a watch-procedure process
+        // decrement total available ram by totalRamNeeded
+      }
+    }
+
+
     /*
     if (newHacks.length || newWeakens.length || newGrows.length) {
       ns.tprint(`DISTRIBUTOR
