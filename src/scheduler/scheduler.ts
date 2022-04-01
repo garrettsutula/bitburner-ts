@@ -1,7 +1,7 @@
 import { NS } from '@ns';
-import { readJson } from 'lib/file';
+import { readJson, writeJson } from 'lib/file';
 import { disableLogs } from 'lib/logs';
-import { readPortJson, writePortJson } from '/lib/port';
+import { clearPort, readPortJson, writePortJson } from '/lib/port';
 import { shortId } from '/lib/uuid';
 import { QueuedProcedure, RunningProcedure, ScheduledHost } from '/models/procedure';
 import { NewRunningProcesses } from '/models/process';
@@ -41,14 +41,17 @@ export async function main(ns : NS) : Promise<void> {
   const scheduledHosts = new Map<string, ScheduledHost>();
   const procedureQueue: QueuedProcedure[] = [];
   disableLogs(ns);
+  clearPort(ns, 7);
+  clearPort(ns, 8);
+  clearPort(ns, 9);
 
-  // Load rooted hosts (found, rooted in network) and controlled hosts (home + servers + rooted).
-  const rootedHosts = readJson(ns, '/data/rootedHosts.txt') as string[];
+  // Load rooted hosts (found, rooted in network) and controlled hosts (home + servers + rooted). 
+  const exploitableHosts = readJson(ns, '/data/exploitableHosts.txt') as string[];
   const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
   // Set initial schedule for rooted hosts.
   // This doesn't kill or change anything we have running.
-  rootedHosts
+  exploitableHosts
   .forEach((host) => {
     const currentSecurityLevel = ns.getServerSecurityLevel(host);
     const minSecurityLevel = ns.getServerMinSecurityLevel(host);
@@ -75,11 +78,13 @@ export async function main(ns : NS) : Promise<void> {
 
   while (true) {
     const scheduledHostsArr = Array.from(scheduledHosts.values());
+    // Only attempt to queue new Procedures if our queue depth is shallow.
     if (procedureQueue.length < 5) {
-      // Queue new procedure for any hosts that don't have one running already.
-      const scheduledNotRunning = scheduledHostsArr
+
+      // Queue new prepare procedures
+      const needToPrepare = scheduledHostsArr
         .filter((scheduledHost) => 
-        // Not Running
+        // Not Running a prepare already
         scheduledHost.runningProcedures.size === 0
         // Not queued (avoid queue depth overload)
         && !scheduledHost.queued
@@ -87,7 +92,7 @@ export async function main(ns : NS) : Promise<void> {
         && scheduledHost.assignedProcedure === 'prepare'
         );
 
-      for (const scheduledHost of scheduledNotRunning) {
+      for (const scheduledHost of needToPrepare) {
         const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
             host: scheduledHost.host,
@@ -96,17 +101,15 @@ export async function main(ns : NS) : Promise<void> {
           scheduledHost.queued = true;
       }
 
-      // Queue follow-up exploit procedure for any that are currently running.
-      const scheduledAndRunnningExploit = scheduledHostsArr
+      // Queue new exploit procedures 
+      const needToExploit = scheduledHostsArr
         .filter((scheduledHost) => 
-          // Running
-          scheduledHost.runningProcedures.size
           // But not queued (avoid queue depth overload)
-          && !scheduledHost.queued
+          !scheduledHost.queued
           // And after the 'prepare' stage
           && scheduledHost.assignedProcedure === 'exploit');
 
-        for (const scheduledHost of scheduledAndRunnningExploit) {
+        for (const scheduledHost of needToExploit) {
           const procedure = getProcedure(ns, scheduledHost);
             procedureQueue.push({
               host: scheduledHost.host,
@@ -118,13 +121,14 @@ export async function main(ns : NS) : Promise<void> {
 
     // Execution loop, empty the queue until we OOM
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
+    await writeJson(ns, '/data/controlledHostsMetadata.txt', controlledHostsWithMetadata);
     let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
     while(procedureQueue.length > 0) {
       const currentProcedure = procedureQueue.shift() as QueuedProcedure;
       const currentHost = scheduledHosts.get(currentProcedure.host) as ScheduledHost;
       const hostRunningProceduresArr = Array.from(currentHost.runningProcedures.values());
       const expectedEndTimes = hostRunningProceduresArr
-        .map(({timeStarted, procedure}) => timeStarted + procedure.totalDuration)
+        .map(({timeStarted, procedure}) => timeStarted + procedure.totalDuration);
       if (
         // Make sure we have enough RAM to instantiate this Procedure.
         currentProcedure.procedure.totalRamNeeded < totalAvailableRam
@@ -136,6 +140,8 @@ export async function main(ns : NS) : Promise<void> {
         ns.run('/scheduler/manage-procedure.js', 1, processId);
         totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
         while(ns.peek(8) === 'NULL PORT DATA') await ns.sleep(30);
+        const peek = ns.peek(8);
+        ns.print(peek);
         const { processes } = readPortJson(ns, 8) as NewRunningProcesses;
         currentHost.runningProcedures.set(processId, {
           processId,

@@ -33,3 +33,7 @@ export function readPortJson(ns: NS, port: number): GenericObject | string[] {
 export function writePortJson(ns: NS, port: number, data: GenericObject | string[]): Promise<void> {
   return ns.writePort(port, JSON.stringify(data, replacer));
 }
+
+export function clearPort(ns: NS, port: number): void {
+  return ns.clearPort(port)
+}
