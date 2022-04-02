@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 const throttleRatio = 1;
-const hackPercentage = 0.25;
+const hackPercentage = 0.15;
 const stepBuffer = 50;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
