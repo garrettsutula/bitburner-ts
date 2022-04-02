@@ -40,22 +40,23 @@ function getProcedure(ns: NS, {host, assignedProcedure}: ScheduledHost) {
 export async function main(ns : NS) : Promise<void> {
   const scheduledHosts = new Map<string, ScheduledHost>();
   const procedureQueue: QueuedProcedure[] = [];
+  let count = 100;
   disableLogs(ns);
   clearPort(ns, 7);
   clearPort(ns, 8);
   clearPort(ns, 9);
 
   // Load rooted hosts (found, rooted in network) and controlled hosts (home + servers + rooted). 
-  const exploitableHosts = readJson(ns, '/data/exploitableHosts.txt') as string[];
+  const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,3);
   const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
   // Set initial schedule for rooted hosts.
   // This doesn't kill or change anything we have running.
   exploitableHosts
   .forEach((host) => {
-    const currentSecurityLevel = ns.getServerSecurityLevel(host);
-    const minSecurityLevel = ns.getServerMinSecurityLevel(host);
-    if (currentSecurityLevel > minSecurityLevel + 2) {
+    const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
+    const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.90 < ns.getServerMoneyAvailable(host);
+    if (!isAlreadyWeakened || !isAlreadyGrown ) {
       scheduledHosts.set(host, {
         host,
         assignedProcedure: 'prepare',
@@ -91,7 +92,7 @@ export async function main(ns : NS) : Promise<void> {
         // On the 'prepare' stage
         && scheduledHost.assignedProcedure === 'prepare'
         );
-
+      if (count % 100 === 0) ns.tprint(`${needToPrepare.length} hosts need to be prepared: ${needToPrepare.map(({host}) => host).join(', ')}`);
       for (const scheduledHost of needToPrepare) {
         const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
@@ -108,7 +109,7 @@ export async function main(ns : NS) : Promise<void> {
           !scheduledHost.queued
           // And after the 'prepare' stage
           && scheduledHost.assignedProcedure === 'exploit');
-
+        if (count % 100 === 0) ns.tprint(`${needToExploit.length} hosts will be exploited: ${needToPrepare.map(({host}) => host).join(', ')}`);
         for (const scheduledHost of needToExploit) {
           const procedure = getProcedure(ns, scheduledHost);
             procedureQueue.push({
@@ -129,15 +130,14 @@ export async function main(ns : NS) : Promise<void> {
       const hostRunningProceduresArr = Array.from(currentHost.runningProcedures.values());
       const expectedEndTimes = hostRunningProceduresArr
         .map(({timeStarted, procedure}) => timeStarted + procedure.totalDuration);
-      if (
-        // Make sure we have enough RAM to instantiate this Procedure.
-        currentProcedure.procedure.totalRamNeeded < totalAvailableRam
-        // Check timing, now + duration needs to exceed every expected procedure end time.
-        && expectedEndTimes.every((time) => time < (Date.now() + currentProcedure.procedure.totalDuration) + procedureSafetyBufferMs)
-        ) {
+      if (currentProcedure.procedure.totalRamNeeded > totalAvailableRam) {
+        procedureQueue.unshift(currentProcedure);
+        if(count % 100 === 0) ns.tprint(`WARN: Out of memory, ${procedureQueue.length} items remain in current queue`);
+        break;
+      } else if (expectedEndTimes.every((time) => time < Date.now() + currentProcedure.procedure.totalDuration + procedureSafetyBufferMs)) {
         const processId = shortId();
         await writePortJson(ns, 7, currentProcedure);
-        ns.run('/scheduler/manage-procedure.js', 1, processId);
+        ns.run('/scheduler/manage-procedure.js', 1, processId, currentProcedure.host);
         totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
         while(ns.peek(8) === 'NULL PORT DATA') await ns.sleep(30);
         const peek = ns.peek(8);
@@ -145,20 +145,28 @@ export async function main(ns : NS) : Promise<void> {
         const { processes } = readPortJson(ns, 8) as NewRunningProcesses;
         currentHost.runningProcedures.set(processId, {
           processId,
-          processes,
+          processes, 
           timeStarted: Date.now(),
           procedure: currentProcedure.procedure,
         });
         currentHost.queued = false;
+        ns.tprint(`
+        \tStarted Procedure
+        \tHost: ${currentProcedure.host}
+        \tType: ${currentHost.assignedProcedure}
+        \tExpected Duration: ${currentProcedure.procedure.totalDuration / 1000}s
+        \tRam Used: ${currentProcedure.procedure.totalRamNeeded}
+        `)
       } else {
         procedureQueue.unshift(currentProcedure);
-        ns.tprint(`WARN: Out of memory, ${procedureQueue.length} items remain in current queue`);
-        break;
+        // if(count % 100 === 0) ns.tprint(`Not ready to schedule more Procedures for ${currentProcedure.host}.`);
       }
     }
 
     // Read any running processes out of queue, only the first step will be read from the port when executing above.
-    while (ns.peek(8) !== 'NULL PORT DATE') {
+    while (ns.peek(8) !== 'NULL PORT DATA') {
+      const peek = ns.peek(8);
+      ns.print(peek); 
       const { host, processId, processes } = readPortJson(ns, 8) as NewRunningProcesses;
       const scheduledHost = scheduledHosts.get(host) as ScheduledHost;
       const procedure = scheduledHost.runningProcedures.get(processId) as RunningProcedure;
@@ -174,5 +182,6 @@ export async function main(ns : NS) : Promise<void> {
       if (scheduledHost.assignedProcedure === 'prepare') scheduledHost.assignedProcedure = 'exploit';
     }
     await ns.sleep(500);
+    count +=1;
   }
 }

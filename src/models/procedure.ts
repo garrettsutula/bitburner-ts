@@ -1,11 +1,13 @@
 import { Process } from '/models/process';
 
 export interface ProcedureStep {
+  ordinal: number;
   script: string;
   duration: number;
   threadsNeeded: number;
   ramNeeded: number;
   securityLevelIncrease?: number;
+  delay?: number;
 }
 
 export interface Procedure {

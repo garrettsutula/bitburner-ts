@@ -13,8 +13,7 @@ export async function scheduleAcrossHosts(
   controlledHostsWithMetadata: ControlledServers[],
   jobScript: string,
   jobThreads: number,
-  jobTarget: string,
-  processId: string
+  ...args: (string | number | boolean)[]
 ): Promise<Process[]> {
   const startedProcesses = [];
   const ramPerTask = ns.getScriptRam(jobScript, 'home');
@@ -27,8 +26,8 @@ export async function scheduleAcrossHosts(
 
     jobThreads -= numThisHost;
     if (numThisHost > 0) {
-      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, jobTarget, processId);
-      startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args: [jobTarget, processId] });
+      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, ...args);
+      startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args });
     }
 
     if (jobThreads > 0) {

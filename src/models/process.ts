@@ -1,7 +1,9 @@
+import { Args } from '/models/utility';
+
 export interface Process {
   host: string;
   script: string;
-  args: Array<string | number>
+  args: (string | number | boolean)[];
 }
 
 export interface NewRunningProcesses {
