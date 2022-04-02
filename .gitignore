@@ -2,3 +2,5 @@ node_modules/
 dist/
 NetscriptDefinitions.d.ts
 .vscode/settings.json
+.env
+logs/**/*

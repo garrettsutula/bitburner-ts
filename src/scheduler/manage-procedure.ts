@@ -21,10 +21,8 @@ export async function main(ns : NS) : Promise<void> {
     
     ns.print(`${step.script} sleeping for ${(step.delay || 0/1000).toFixed(1)} seconds then executing.`);
     const controlledHosts = readJson(ns, '/data/controlledHostsMetadata.txt') as ControlledServers[];
-    const processes = await scheduleAcrossHosts(ns, controlledHosts, step.script, step.threadsNeeded, host, step.delay || 0, processId);
+    await scheduleAcrossHosts(ns, controlledHosts, step.script, step.threadsNeeded, host, step.delay || 0, processId);
     await writeJson(ns, '/data/controlledHostsMetadata.txt', controlledHosts);
-    const timeStarted = Date.now();
-    await writePortJson(ns, 8, { host, processId, processes, timeStarted });
     index +=1;
   }
   await ns.sleep(totalDuration);
