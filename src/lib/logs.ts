@@ -20,4 +20,5 @@ export function disableLogs(ns: NS): void {
   ns.disableLog('kill');
   ns.disableLog('killall');
   ns.disableLog('sleep');
+  ns.disableLog('run');
 }

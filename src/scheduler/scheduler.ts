@@ -46,7 +46,7 @@ export async function main(ns : NS) : Promise<void> {
   clearPort(ns, 9);
 
   // Load rooted hosts (found, rooted in network) and controlled hosts (home + servers + rooted). 
-  const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).slice(0,10);
+  const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
   const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
   // Set initial schedule for rooted hosts.
@@ -121,9 +121,7 @@ export async function main(ns : NS) : Promise<void> {
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
     await writeJson(ns, '/data/controlledHostsMetadata.txt', controlledHostsWithMetadata);
     let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
-    while(procedureQueue.length > 0) {
-      const alreadyTriedToRun: QueuedProcedure[] = [];
-      const currentProcedure = procedureQueue.shift() as QueuedProcedure;
+    for (const currentProcedure of procedureQueue) {
       const currentHost = scheduledHosts.get(currentProcedure.host) as ScheduledHost;
       const hostRunningProceduresArr = Array.from(currentHost.runningProcedures.values());
       const expectedEndTimes = hostRunningProceduresArr
@@ -131,9 +129,7 @@ export async function main(ns : NS) : Promise<void> {
       const futureProcedureEstimatedEnd = Date.now() + currentProcedure.procedure.totalDuration + procedureSafetyBufferMs;
       if (currentProcedure.procedure.totalRamNeeded > totalAvailableRam) {
         procedureQueue.push(currentProcedure);
-        if (alreadyTriedToRun.includes(currentProcedure)) break;
-        alreadyTriedToRun.push(currentProcedure);
-        
+        break;
       } else if (expectedEndTimes.every((time) => time < futureProcedureEstimatedEnd)) {
         const processId = shortId();
         await writePortJson(ns, 7, currentProcedure);
@@ -146,21 +142,16 @@ export async function main(ns : NS) : Promise<void> {
           procedure: currentProcedure.procedure,
         });
         currentHost.queued = false;
-        ns.print(`
-        \tStarted Procedure
-        \tHost: ${currentProcedure.host}
-        \tType: ${currentHost.assignedProcedure}
-        \tExpected Duration: ${currentProcedure.procedure.totalDuration / 1000}s
-        \tRam Used: ${currentProcedure.procedure.totalRamNeeded}
-        `)
+        ns.print(`Started: ${currentHost.assignedProcedure}@${currentProcedure.host} - ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s, ${currentProcedure.procedure.totalRamNeeded}GB Used`);
       } else {
         procedureQueue.unshift(currentProcedure);
         // if(count % 100 === 0) ns.tprint(`Not ready to schedule more Procedures for ${currentProcedure.host}.`);
       }
     }
-
+  
     // Read queue signals and update running processes.
     while (ns.peek(9) !== 'NULL PORT DATA') {
+      
       const peekedValue = ns.peek(9);
       const terminatedProcedure = readPortJson(ns, 9) as GenericObject;
       let host, processId;
