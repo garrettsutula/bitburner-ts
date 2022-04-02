@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 const throttleRatio = 1;
-const hackPercentage = 0.50;
+const hackPercentage = 0.01;
 const stepBuffer = 100;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
@@ -17,11 +17,10 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = ns.getGrowTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
-  const currentMoney = ns.getServerMoneyAvailable(host);
-  const moneyBase = prepare ? currentMoney : maxMoney;
+  const hackGrowthFactor = ((maxMoney * hackPercentage) / (maxMoney * throttleRatio * 1.01)) + 1;
   // TODO: pass cores as param
   // TODO: fix the magic ratio here, we have been overhacking and this is temp fix
-  const growthFactor = (moneyBase * throttleRatio * 1.50) / (moneyBase * hackPercentage);
+  const growthFactor = prepare ? 1.01 : hackGrowthFactor;
   const threadsNeeded = ns.growthAnalyze(host, growthFactor < 1 ? 1 : growthFactor, 1); 
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
