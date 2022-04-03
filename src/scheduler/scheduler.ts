@@ -9,7 +9,7 @@ import { GenericObject } from '/models/utility';
 import { exploitSchedule } from '/scheduler/stages/exploit';
 import { prepareSchedule } from '/scheduler/stages/prepare';
 
-const minHomeRamAvailable = 32;
+const minHomeRamAvailable = 256;
 const procedureSafetyBufferMs = 1000 * 1;
 
 function getControlledHostsWithMetadata(ns: NS, hosts: string[]): ControlledServers[] {
@@ -38,7 +38,6 @@ function getProcedure(ns: NS, {host, assignedProcedure}: ScheduledHost) {
 
 export async function main(ns : NS) : Promise<void> {
   const scheduledHosts = new Map<string, ScheduledHost>();
-  const procedureQueue: QueuedProcedure[] = [];
   let count = 1000;
   disableLogs(ns);
   clearPort(ns, 7);
@@ -46,8 +45,8 @@ export async function main(ns : NS) : Promise<void> {
   clearPort(ns, 9);
 
   // Load rooted hosts (found, rooted in network) and controlled hosts (home + servers + rooted). 
-  const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
-  const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
+  const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,10);
+  let controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
 
   // Set initial schedule for rooted hosts.
   // This doesn't kill or change anything we have running.
@@ -79,6 +78,7 @@ export async function main(ns : NS) : Promise<void> {
   // 8 - Receive 
 
   while (true) {
+    const procedureQueue: QueuedProcedure[] = [];
     const scheduledHostsArr = Array.from(scheduledHosts.values());
     // Only attempt to queue new Procedures if our queue depth is shallow.
     if (procedureQueue.length < 5) {
@@ -86,14 +86,14 @@ export async function main(ns : NS) : Promise<void> {
       const needToPrepare = scheduledHostsArr
         .filter((scheduledHost) => 
         // No running procedures or fewer than needed to hit threshold.
-        (scheduledHost.runningProcedures.size === 0 || (scheduledHost.runningProcedures.size > 0 && ns.getServerMaxMoney(scheduledHost.host) * 0.88 > ns.getServerMoneyAvailable(scheduledHost.host)))
+        scheduledHost.runningProcedures.size === 0 
         // Not queued (avoid queue depth overload)
         && !scheduledHost.queued
         // On the 'prepare' stage
         && scheduledHost.assignedProcedure === 'prepare');
       for (const scheduledHost of needToPrepare) {
         const procedure = getProcedure(ns, scheduledHost);
-          procedureQueue.push({
+          procedureQueue.unshift({
             host: scheduledHost.host,
             procedure,
           });
@@ -121,33 +121,35 @@ export async function main(ns : NS) : Promise<void> {
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
     await writeJson(ns, '/data/controlledHostsMetadata.txt', controlledHostsWithMetadata);
     let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
-    for (const currentProcedure of procedureQueue) {
+    while (procedureQueue.length > 0) {
+      const currentProcedure = procedureQueue.shift() as QueuedProcedure;
       const currentHost = scheduledHosts.get(currentProcedure.host) as ScheduledHost;
       const hostRunningProceduresArr = Array.from(currentHost.runningProcedures.values());
       const expectedEndTimes = hostRunningProceduresArr
         .map(({timeStarted, procedure}) => timeStarted + procedure.totalDuration);
       const futureProcedureEstimatedEnd = Date.now() + currentProcedure.procedure.totalDuration + procedureSafetyBufferMs;
-      if (currentProcedure.procedure.totalRamNeeded > totalAvailableRam) {
-        procedureQueue.push(currentProcedure);
-        break;
-      } else if (expectedEndTimes.every((time) => time < futureProcedureEstimatedEnd)) {
+      if (currentProcedure.procedure.totalRamNeeded > totalAvailableRam
+          || !expectedEndTimes.every((time) => time < futureProcedureEstimatedEnd)) {
+            break;
+      } else {
+           {
         const processId = shortId();
         await writePortJson(ns, 7, currentProcedure);
-        ns.run('/scheduler/manage-procedure.js', 1, processId, currentProcedure.host);
-        totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
-        currentHost.runningProcedures.set(processId, {
-          processId,
-          processes: [], 
-          timeStarted: Date.now(),
-          procedure: currentProcedure.procedure,
-        });
-        currentHost.queued = false;
-        ns.print(`Started: ${currentHost.assignedProcedure}@${currentProcedure.host} - ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s, ${currentProcedure.procedure.totalRamNeeded}GB Used`);
-      } else {
-        procedureQueue.unshift(currentProcedure);
-        // if(count % 100 === 0) ns.tprint(`Not ready to schedule more Procedures for ${currentProcedure.host}.`);
+        const runResult = ns.run('/scheduler/manage-procedure.js', 1, processId, currentProcedure.host);
+        if (runResult !== 0) {
+          totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
+          currentHost.runningProcedures.set(processId, {
+            processId,
+            processes: [], 
+            timeStarted: Date.now(),
+            procedure: currentProcedure.procedure,
+          });
+          currentHost.queued = false;
+          ns.print(`Started: ${currentHost.assignedProcedure}@${currentProcedure.host} - ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s, ${(currentProcedure.procedure.totalRamNeeded).toFixed(0)}GB Used`);
+        }
       }
     }
+  }
   
     // Read queue signals and update running processes.
     while (ns.peek(9) !== 'NULL PORT DATA') {
@@ -184,6 +186,7 @@ export async function main(ns : NS) : Promise<void> {
         .join('\n')}`);
     } 
     await ns.sleep(100);
+    controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
     count +=1;
   }
 }
