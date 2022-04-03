@@ -4,3 +4,7 @@ export async function execa(ns : NS, fileName: string, hostName: string, threads
   await ns.scp(fileName, 'home', hostName);
   return ns.exec(fileName, hostName, threads, ...restArgs);
 }
+
+export function kill(ns: NS, host: string, script: string, args: any[]) {
+  return ns.kill(host, script, ...args);
+}

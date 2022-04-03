@@ -7,10 +7,11 @@ import { ControlledServers } from '/models/server';
 import { exploitSchedule } from '/scheduler/stages/exploit';
 import { prepareSchedule } from '/scheduler/stages/prepare';
 import { scheduleAcrossHosts } from '/lib/process';
+import { kill } from 'lib/exec';
 
 const minHomeRamAvailable = 256;
 const procedureSafetyBufferMs = 1000 * 1;
-const terminalLogInterval = 1000 * 15;
+const terminalLogInterval = 1000 * 120;
 const terminalErrorInterval = 1000 * 5;
 let lastLogToTerminal = Date.now() - terminalLogInterval; // Subtract a minute
 let lastErrorToTerminal = Date.now() - terminalLogInterval; // Subtract a minute
@@ -82,6 +83,13 @@ async function runProcedure(ns: NS, processId: string, currentProcedure: QueuedP
   return newProcesses;
 }
 
+function endAllRunningProcedures(ns: NS, scheduledHost: ScheduledHost) {
+  scheduledHost.runningProcedures.forEach((runningProcedure) => {
+    runningProcedure.processes.forEach(({ script, host, args }) => kill(ns, script, host, args));
+  })
+  scheduledHost.runningProcedures.clear();
+}
+
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
@@ -111,18 +119,21 @@ export async function main(ns : NS) : Promise<void> {
       const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.90 < ns.getServerMoneyAvailable(host);
       if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
             scheduledHost.assignedProcedure = 'exploit';
+            endAllRunningProcedures(ns, scheduledHost);
         ns.tprint(`${host} switching from PREPARE to EXPLOIT!`);
       } else if ((!isAlreadyWeakened || !isAlreadyGrown) && scheduledHost.assignedProcedure === 'exploit') {
         ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
         scheduledHost.assignedProcedure = 'prepare';
+        endAllRunningProcedures(ns, scheduledHost);
       }
-      // Remove old procedures
+
+      // Remove old procedures that have ended
       scheduledHost.runningProcedures.forEach((procedure, key) => {
         if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
       })
 
       // Queue prepare procedures
-      if(scheduledHost.assignedProcedure === 'prepare') {
+      if(scheduledHost.runningProcedures.size < 5 && scheduledHost.assignedProcedure === 'prepare') {
         const procedure = getProcedure(ns, scheduledHost);
         procedureQueue.push({
           host,
