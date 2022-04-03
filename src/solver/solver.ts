@@ -186,15 +186,18 @@ function generateIps(num: number) {
 
 // GREATEST FACTOR
 
-function factor(num: number) {
-  for (let div = 2; div <= Math.sqrt(num); div += 1) {
-    if (num % div === 0) {
-      num /= div;
-      div = 2;
-    }
+function factor(n: number){
+  let i=2;
+  while (i<=n){
+      if (n%i == 0){
+          n/=i;    
+      }else{
+          i +=1;
+      }
   }
-  return num;
-}
+  return i.toString();
+  }
+
 
 // SPIRALIZE Matrix
 
