@@ -106,48 +106,49 @@ export async function main(ns : NS) : Promise<void> {
     const scheduledHostsArr = Array.from(scheduledHosts.values());
 
     // Only attempt to queue new Procedures if our queue depth is shallow.
-    if (procedureQueue.length >= scheduledHostsArr.length && scheduledHostsArr.length > 0) {
+    if (procedureQueue.length < scheduledHostsArr.length || procedureQueue.length == 0) {
+      for (const scheduledHost of scheduledHostsArr) {
+        // If needed, move the host to the exploit Procedure now that it is prepared.
+        const host = scheduledHost.host;
+        const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
+        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.90 < ns.getServerMoneyAvailable(host);
+        if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
+              scheduledHost.assignedProcedure = 'exploit';
+              endAllRunningProcedures(ns, scheduledHost);
+          ns.tprint(`${host} switching from PREPARE to EXPLOIT!`);
+        } else if ((!isAlreadyWeakened || !isAlreadyGrown) && scheduledHost.assignedProcedure === 'exploit') {
+          ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
+          scheduledHost.assignedProcedure = 'prepare';
+          endAllRunningProcedures(ns, scheduledHost);
+        }
+  
+        // Remove old procedures that have ended
+        scheduledHost.runningProcedures.forEach((procedure, key) => {
+          if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
+        })
+  
+        // Queue prepare procedures
+        if(scheduledHost.runningProcedures.size < 5 && scheduledHost.assignedProcedure === 'prepare') {
+          const procedure = getProcedure(ns, scheduledHost);
+          procedureQueue.push({
+            host,
+            procedure,
+          });
+        }
+        // Queue exploit procedures
+        if(scheduledHost.runningProcedures.size < 10 && scheduledHost.assignedProcedure === 'exploit') {
+          const procedure = getProcedure(ns, scheduledHost);
+          procedureQueue.push({
+            host: scheduledHost.host,
+            procedure,
+          });
+        }
+      }
+    } else {
       const message = 'queue depth at maximum'
       ns.print(message);
       intermittentLog(ns, message, true);
       continue;
-    }
-    for (const scheduledHost of scheduledHostsArr) {
-      // If needed, move the host to the exploit Procedure now that it is prepared.
-      const host = scheduledHost.host;
-      const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
-      const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.90 < ns.getServerMoneyAvailable(host);
-      if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
-            scheduledHost.assignedProcedure = 'exploit';
-            endAllRunningProcedures(ns, scheduledHost);
-        ns.tprint(`${host} switching from PREPARE to EXPLOIT!`);
-      } else if ((!isAlreadyWeakened || !isAlreadyGrown) && scheduledHost.assignedProcedure === 'exploit') {
-        ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
-        scheduledHost.assignedProcedure = 'prepare';
-        endAllRunningProcedures(ns, scheduledHost);
-      }
-
-      // Remove old procedures that have ended
-      scheduledHost.runningProcedures.forEach((procedure, key) => {
-        if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
-      })
-
-      // Queue prepare procedures
-      if(scheduledHost.runningProcedures.size < 5 && scheduledHost.assignedProcedure === 'prepare') {
-        const procedure = getProcedure(ns, scheduledHost);
-        procedureQueue.push({
-          host,
-          procedure,
-        });
-      }
-      // Queue exploit procedures
-      if(scheduledHost.runningProcedures.size < 10 && scheduledHost.assignedProcedure === 'exploit') {
-        const procedure = getProcedure(ns, scheduledHost);
-        procedureQueue.push({
-          host: scheduledHost.host,
-          procedure,
-        });
-      }
     }
 
     // Execution loop, empty the queue until we OOM
