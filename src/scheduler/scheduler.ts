@@ -99,7 +99,7 @@ export async function main(ns : NS) : Promise<void> {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
     await ns.sleep(100);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse();
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
     const procedureQueue: QueuedProcedure[] = [];
     
     exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
@@ -128,7 +128,7 @@ export async function main(ns : NS) : Promise<void> {
         })
   
         // Queue prepare procedures
-        if(scheduledHost.runningProcedures.size < 5 && scheduledHost.assignedProcedure === 'prepare') {
+        if(scheduledHost.runningProcedures.size < 2 && scheduledHost.assignedProcedure === 'prepare') {
           const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
             host,
@@ -136,7 +136,7 @@ export async function main(ns : NS) : Promise<void> {
           });
         }
         // Queue exploit procedures
-        if(scheduledHost.runningProcedures.size < 10 && scheduledHost.assignedProcedure === 'exploit') {
+        if(scheduledHost.runningProcedures.size < 2 && scheduledHost.assignedProcedure === 'exploit') {
           const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
             host: scheduledHost.host,
