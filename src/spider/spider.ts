@@ -66,10 +66,6 @@ async function spider(ns: NS) {
       }
     }
   }
-  const controlledHostsArr = Array.from(controlledHosts.values());
-  for (const host of controlledHostsArr) {
-    await ns.scp(ns.ls('home', '/lib/'), host);
-  }
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
