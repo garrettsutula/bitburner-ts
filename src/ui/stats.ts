@@ -17,9 +17,12 @@ export async function main(ns : NS) : Promise<void> {
           }
 
           if (ns.getScriptIncome()[0] > 0) {
-              headers.push('Hack Income: ')
-              values.push('   ' + ns.nFormat(ns.getScriptIncome()[0], '$0,0') + ' /s')
-          }
+              headers.push('Hack Income: ');
+              const args: string[] = []
+              values.push('   ' + ns.nFormat(ns.getScriptIncome('/scheduler/scheduler.js', 'home', ...args), '$0,0') + ' /s')
+              headers.push('Stock Income: ');
+              values.push('   ' + ns.nFormat(ns.getScriptIncome('stockMaster.js', 'home', ...args), '$0,0') + ' /s')
+            }
 
           headers.push('HOME Ram Use: ')
           values.push(ns.nFormat(ns.getServerUsedRam('home'), '0,0') + ' / ' + ns.nFormat(ns.getServerMaxRam('home'), '0,0'))
