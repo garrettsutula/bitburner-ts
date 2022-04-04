@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 const throttleRatio = 1;
-const hackPercentage = 0.50;
+const hackPercentage = 0.70;
 const stepBuffer = 75;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
@@ -9,7 +9,7 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = Math.ceil(securityLevel / 0.05 * throttleRatio);
+  const threadsNeeded = Math.ceil((securityLevel * 1.10) / 0.05 * throttleRatio);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { ordinal, script, duration, threadsNeeded, ramNeeded }
 }
