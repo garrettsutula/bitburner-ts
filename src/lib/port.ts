@@ -21,8 +21,8 @@ function reviver(key: string, value: any) {
   return value;
 }
 
-export function readJson(ns: NS, filePath: string): GenericObject | string[] {
-  const fileStr = ns.read(filePath);
+export function readPortJson(ns: NS, port: number): GenericObject | string[] {
+  const fileStr = ns.readPort(port);
   try {
     return JSON.parse(fileStr, reviver);
   } catch (e) {
@@ -30,10 +30,10 @@ export function readJson(ns: NS, filePath: string): GenericObject | string[] {
   }
 }
 
-export function writeJson(ns: NS, filePath: string, fileContents: GenericObject | string[], mode: ('w'|'a') = 'w'): Promise<void> {
-  return ns.write(filePath, JSON.stringify(fileContents, replacer), mode);
+export function writePortJson(ns: NS, port: number, data: GenericObject | string[]): Promise<void> {
+  return ns.writePort(port, JSON.stringify(data, replacer));
 }
 
-export function appendLog(ns: NS, filePath: string, logEntries:  GenericObject[]): Promise<void> {
-  return ns.write(filePath, logEntries.map((logEntry) => JSON.stringify(logEntry)).join('\n'), 'a');
+export function clearPort(ns: NS, port: number): void {
+  return ns.clearPort(port)
 }
