@@ -93,6 +93,7 @@ function endAllRunningProcedures(ns: NS, scheduledHost: ScheduledHost) {
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
+  let procedureLimit = 1;
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
@@ -115,7 +116,7 @@ export async function main(ns : NS) : Promise<void> {
         if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
               scheduledHost.assignedProcedure = 'exploit';
               endAllRunningProcedures(ns, scheduledHost);
-          ns.tprint(`${host} switching from PREPARE to EXPLOIT!`);
+          ns.tprint(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
         } else if ((!isAlreadyWeakened || !isAlreadyGrown) && scheduledHost.assignedProcedure === 'exploit') {
           ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
           scheduledHost.assignedProcedure = 'prepare';
@@ -128,7 +129,7 @@ export async function main(ns : NS) : Promise<void> {
         })
   
         // Queue prepare procedures
-        if(scheduledHost.runningProcedures.size < 2 && scheduledHost.assignedProcedure === 'prepare') {
+        if(scheduledHost.runningProcedures.size < procedureLimit && scheduledHost.assignedProcedure === 'prepare') {
           const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
             host,
@@ -136,7 +137,7 @@ export async function main(ns : NS) : Promise<void> {
           });
         }
         // Queue exploit procedures
-        if(scheduledHost.runningProcedures.size < 2 && scheduledHost.assignedProcedure === 'exploit') {
+        if(scheduledHost.runningProcedures.size < procedureLimit && scheduledHost.assignedProcedure === 'exploit') {
           const procedure = getProcedure(ns, scheduledHost);
           procedureQueue.push({
             host: scheduledHost.host,
@@ -171,7 +172,7 @@ export async function main(ns : NS) : Promise<void> {
               timeStarted: Date.now(),
               procedure: currentProcedure.procedure,
             });
-            ns.print(`Started: ${currentHost.assignedProcedure}@${currentProcedure.host} - ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s, ${(currentProcedure.procedure.totalRamNeeded).toFixed(0)}GB Used`);
+            ns.print(`INFO: STARTED ${currentHost.assignedProcedure}@${currentProcedure.host}, *** ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s *** ${(currentProcedure.procedure.totalRamNeeded).toFixed(0)}GB Used`);
             totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
       } else {
         procedureQueue.unshift(currentProcedure);
@@ -179,7 +180,12 @@ export async function main(ns : NS) : Promise<void> {
       }
     }
 
-    intermittentLog(ns, `\nScheduler Report ${new Date().toLocaleTimeString()}:\nqueue depth - ${procedureQueue.length}\n-----------------\n${scheduledHostsArr
+    if (scheduledHostsArr.every((scheduledHost) => scheduledHost.runningProcedures.size === procedureLimit)) {
+      ns.tprint(`INFO: Procedure limit increased, was ${procedureLimit - 1}, now ${procedureLimit}.`);
+      procedureLimit += 1;
+    }
+
+    intermittentLog(ns, `INFO:\nScheduler Report ${new Date().toLocaleTimeString()}:\nqueue depth - ${procedureQueue.length}\n-----------------\n${scheduledHostsArr
       .map((scheduledHost) => `* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}`)
       .join('\n')}`);
   }
