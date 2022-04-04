@@ -1,12 +1,12 @@
 import { NS } from '@ns';
 import { readJson, writeJson } from 'lib/file';
 import { disableLogs } from 'lib/logs';
-import { shortId } from '/lib/uuid';
-import { QueuedProcedure, ScheduledHost } from '/models/procedure';
-import { ControlledServers } from '/models/server';
-import { exploitSchedule } from '/scheduler/stages/exploit';
-import { prepareSchedule } from '/scheduler/stages/prepare';
-import { scheduleAcrossHosts } from '/lib/process';
+import { shortId } from 'lib/uuid';
+import { QueuedProcedure, ScheduledHost } from 'models/procedure';
+import { ControlledServers } from 'models/server';
+import { exploitSchedule } from 'scheduler/stages/exploit';
+import { prepareSchedule } from 'scheduler/stages/prepare';
+import { scheduleAcrossHosts } from 'lib/process';
 import { kill } from 'lib/exec';
 
 const minHomeRamAvailable = 256;
@@ -112,7 +112,7 @@ export async function main(ns : NS) : Promise<void> {
         // If needed, move the host to the exploit Procedure now that it is prepared.
         const host = scheduledHost.host;
         const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
-        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.90 < ns.getServerMoneyAvailable(host);
+        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.70 < ns.getServerMoneyAvailable(host);
         if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
               scheduledHost.assignedProcedure = 'exploit';
               endAllRunningProcedures(ns, scheduledHost);

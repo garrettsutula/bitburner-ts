@@ -1,7 +1,7 @@
 import { NS } from '@ns';
 import { appendLog } from '/lib/file';
 import { readJson } from '/lib/file';
-const logResolutionMs = 1000 * 5;
+const logResolutionMs = 1000 * 1;
  
 export async function main(ns : NS) : Promise<void> {
   while (true) {
@@ -17,8 +17,8 @@ export async function main(ns : NS) : Promise<void> {
     await appendLog(ns, `/log/servers.${filePathTimestamp}.txt`, exploitableHosts.map((host) => {
       const server: any = ns.getServer(host);
       server['@timestamp'] = now;
-      server.percentOfMaxMoney = server.moneyAvailable / server.moneyMax;
-      server.percentWeakened = server.minDifficulty / server.hackDifficulty;
+      server.percentOfMaxMoney = (server.moneyAvailable / server.moneyMax) * 100;
+      server.percentWeakened = (server.minDifficulty / server.hackDifficulty) * 100;
       return server;
     }));
     await ns.sleep(logResolutionMs);
