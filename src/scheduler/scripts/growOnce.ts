@@ -9,7 +9,7 @@ export async function main(ns : NS) : Promise<void> {
   const delay = ns.args[1] as number;
   const processId = ns.args[2] as string;
   await ns.sleep(delay);
-  await ns.grow(target);
+  const addedMoney = await ns.grow(target);
   const ended = new Date().toISOString();
-  await appendLog(ns, `/log/process.${filePathTimestamp}.txt`, [{processId, type: 'grow', started, ended, target }]);
+  await appendLog(ns, `/log/process.${filePathTimestamp}.txt`, [{processId, type: 'grow', started, ended, target, addedMoney }]);
 }

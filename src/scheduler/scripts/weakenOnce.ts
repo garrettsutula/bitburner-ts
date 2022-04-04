@@ -8,7 +8,7 @@ export async function main(ns : NS) : Promise<void> {
   const delay = ns.args[1] as number;
   const processId = ns.args[2] as string;
   await ns.sleep(delay);
-  await ns.weaken(target);
-  const now = Date.now()
-  await appendLog(ns, `/log/process.${filePathTimestamp}.txt`, [{processId, type: 'hack', started, now, target }]);
+  const securityDecrease = await ns.weaken(target);
+  const ended = Date.now()
+  await appendLog(ns, `/log/process.${filePathTimestamp}.txt`, [{processId, type: 'weaken', started, ended, target, securityDecrease }]);
 }
