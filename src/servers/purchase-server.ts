@@ -4,7 +4,7 @@ export async function main(ns : NS) : Promise<void> {
   const intervalSeconds = 30 * 10;
   ns.disableLog('sleep');
   ns.disableLog('getServerMoneyAvailable');
-  const ram = 4096;
+  const ram = 16384;
 
   let purchasedServerCount = ns.getPurchasedServers().length;
 
