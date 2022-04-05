@@ -288,6 +288,25 @@ function totalSums(number: number) {
     return(dp[N]);
 }
 
+function maxSubArray(nums: number[]) {
+  // initiate two variable, maxSum for total max, sum for current max
+  let maxSum = -Infinity
+  let currentSum = 0
+  // iterate through the nums, store sub-problems result
+  for(let i = 0; i < nums.length; i++){ 
+      //cumulating answers to the top
+      
+      //compare currentSum add current number 
+      //with current number and store the maximum value
+      currentSum = Math.max(nums[i], currentSum + nums[i])
+      
+      //compare maxSum with currentSum and store the greater value
+      maxSum = Math.max(currentSum, maxSum)
+      
+  }
+  return maxSum
+}
+
 function getExpressions(res: string[], curExp: string, input: string, target: number, pos: number, curVal: number, last: number) {
 
         // true if whole input is processed with some
@@ -387,6 +406,9 @@ function solve(type: string, data: any, server: string, contract: string, ns: NS
       break;
     case 'Find All Valid Math Expressions':
       solution= recursiveGetExpressions(data);
+      break;
+    case 'Subarray with Maximum Sum':
+      solution=maxSubArray(data);
       break;
     default:
       return '';
