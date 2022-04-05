@@ -11,7 +11,7 @@ import { kill } from 'lib/exec';
 import { randomArrayShuffle } from '/lib/array';
 
 const minHomeRamAvailable = 256;
-const procedureSafetyBufferMs = 1000 * 1;
+const procedureSafetyBufferMs = 1000 * 5;
 const terminalLogInterval = 1000 * 120;
 const terminalErrorInterval = 1000 * 5;
 let lastLogToTerminal = Date.now() - terminalLogInterval; // Subtract a minute
@@ -94,14 +94,14 @@ function endAllRunningProcedures(ns: NS, scheduledHost: ScheduledHost) {
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  let procedureLimit = 15;
+  let procedureLimit = 50;
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
-    await ns.sleep(5000);
+    await ns.sleep(500);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = randomArrayShuffle((readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,15));
+    const exploitableHosts = randomArrayShuffle((readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse());
     const procedureQueue: QueuedProcedure[] = [];
     
     exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
@@ -112,13 +112,16 @@ export async function main(ns : NS) : Promise<void> {
       for (const scheduledHost of scheduledHostsArr) {
         // If needed, move the host to the exploit Procedure now that it is prepared.
         const host = scheduledHost.host;
+        const nextEndingProcedure = Array.from(scheduledHost.runningProcedures.values())[0];
+        const nextEndTime = nextEndingProcedure ? nextEndingProcedure.timeStarted : Date.now();
+        const nowPlusSafetyBuffer = Date.now() + procedureSafetyBufferMs;
         const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 5;
         const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.20 < ns.getServerMoneyAvailable(host);
-        if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
+        if (isAlreadyWeakened && isAlreadyGrown && nextEndTime < nowPlusSafetyBuffer &&  scheduledHost.assignedProcedure === 'prepare') {
               scheduledHost.assignedProcedure = 'exploit';
               endAllRunningProcedures(ns, scheduledHost);
           ns.tprint(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
-        } else if ((!isAlreadyWeakened || !isAlreadyGrown) && scheduledHost.assignedProcedure === 'exploit') {
+        } else if ((!isAlreadyWeakened || !isAlreadyGrown) && nextEndTime < nowPlusSafetyBuffer && scheduledHost.assignedProcedure === 'exploit') {
           ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
           scheduledHost.assignedProcedure = 'prepare';
           endAllRunningProcedures(ns, scheduledHost);
