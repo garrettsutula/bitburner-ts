@@ -94,14 +94,14 @@ function endAllRunningProcedures(ns: NS, scheduledHost: ScheduledHost) {
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  let procedureLimit = 3;
+  let procedureLimit = 15;
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
-    await ns.sleep(3000);
+    await ns.sleep(5000);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = randomArrayShuffle(readJson(ns, '/data/exploitableHosts.txt') as string[]);
+    const exploitableHosts = randomArrayShuffle((readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,15));
     const procedureQueue: QueuedProcedure[] = [];
     
     exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
@@ -112,8 +112,8 @@ export async function main(ns : NS) : Promise<void> {
       for (const scheduledHost of scheduledHostsArr) {
         // If needed, move the host to the exploit Procedure now that it is prepared.
         const host = scheduledHost.host;
-        const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
-        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.40 < ns.getServerMoneyAvailable(host);
+        const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 5;
+        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.20 < ns.getServerMoneyAvailable(host);
         if (isAlreadyWeakened && isAlreadyGrown && scheduledHost.assignedProcedure === 'prepare') {
               scheduledHost.assignedProcedure = 'exploit';
               endAllRunningProcedures(ns, scheduledHost);
