@@ -13,7 +13,7 @@ import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
 import { isAlreadyGrown, isAlreadyWeakened } from '/lib/metrics';
 
-const queueAndExecutesPerLoop = 10;
+const queueAndExecutesPerLoop = 50;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
