@@ -17,7 +17,7 @@ function prep(ns: NS, target: string) {
   if (requiredHackingLevel
         > currentHackingLevel) {
     discoveredHosts.add(target);
-    ns.tprint(`SPIDER: Can't hack ${target} yet, required level: ${requiredHackingLevel}`);
+    ns.print(`SPIDER: Can't hack ${target} yet, required level: ${requiredHackingLevel}`);
     return false;
   }
   if (ns.hasRootAccess(target)) {
@@ -78,6 +78,6 @@ export async function main(ns: NS) : Promise<void> {
 
   while (true) {
     await spider(ns);
-    await ns.sleep(60000);
+    await ns.sleep(15000);
   }
 }
