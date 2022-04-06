@@ -4,6 +4,8 @@ export async function main(ns: NS): Promise<void> {
   while (true) {
     ns.tail();
     ns.commitCrime('mug someone');
-    await ns.sleep(4500);
+    while(ns.isBusy()) {
+      await ns.sleep(50);
+    }
   }
 }
