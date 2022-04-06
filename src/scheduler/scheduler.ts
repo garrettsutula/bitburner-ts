@@ -9,54 +9,26 @@ import { prepareSchedule } from 'scheduler/stages/prepare';
 import { scheduleAcrossHosts } from 'lib/process';
 import { kill } from 'lib/exec';
 import { randomArrayShuffle } from '/lib/array';
+import { logger } from '/lib/logger';
+import { getControlledHostsWithMetadata } from '/lib/hosts';
+import { isAlreadyGrown, isAlreadyWeakened } from '/lib/metrics';
 
-const minHomeRamAvailable = 256;
-const procedureSafetyBufferMs = 1000 * 5;
-const terminalLogInterval = 1000 * 120;
-const terminalErrorInterval = 1000 * 5;
-let lastLogToTerminal = Date.now() - terminalLogInterval; // Subtract a minute
-let lastErrorToTerminal = Date.now() - terminalLogInterval; // Subtract a minute
-
-function intermittentLog(ns: NS, message: string, error = false) {
-  if (error && lastErrorToTerminal + terminalErrorInterval < Date.now()) {
-    ns.tprint(message);
-    lastErrorToTerminal = Date.now();
-  } else if ( lastLogToTerminal + terminalLogInterval < Date.now()) {
-    ns.tprint(message);
-    lastLogToTerminal = Date.now();
-  }
-}
-
-function getControlledHostsWithMetadata(ns: NS, hosts: string[]): ControlledServers[] {
-  return hosts.map((host) => {
-    let availableRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
-    if (host === 'home') {
-      availableRam = Math.max(0, availableRam - minHomeRamAvailable);
-    }
-    return {
-      host,
-      availableRam,
-    };
-  });
-}
+const queueAndExecutesPerLoop = 10;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
-  const growThreshold = ns.getServerMaxMoney(host) * 0.90;
-  const currentMoney = ns.getServerMoneyAvailable(host);
-  const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 2;
-  const isAlreadyGrown = growThreshold <= currentMoney;
-  if (!isAlreadyWeakened || !isAlreadyGrown ) {
-    scheduledHosts.set(host, {
-      host,
-      assignedProcedure: 'prepare',
-      runningProcedures: new Map(),
-      queued: false,
-    })
-  } else {
+  if (isAlreadyGrown(ns, host) && isAlreadyWeakened(ns, host)) {
     scheduledHosts.set(host, {
       host,
       assignedProcedure: 'exploit',
+      runningProcedures: new Map(),
+      queued: false,
+    })
+
+  } else {
+    scheduledHosts.set(host, {
+      host,
+      assignedProcedure: 'prepare',
       runningProcedures: new Map(),
       queued: false,
     })
@@ -79,7 +51,6 @@ async function runProcedure(ns: NS, processId: string, currentProcedure: QueuedP
   const {host, procedure: { steps }} = currentProcedure;
   for (const step of steps) {    
     newProcesses.push(...(await scheduleAcrossHosts(ns, controlledHosts, step.script, step.threadsNeeded, host, step.delay || 0, processId)));
-    await writeJson(ns, '/data/controlledHostsMetadata.txt', controlledHosts);
   }
   return newProcesses;
 }
@@ -91,105 +62,95 @@ function endAllRunningProcedures(ns: NS, scheduledHost: ScheduledHost) {
   scheduledHost.runningProcedures.clear();
 }
 
+async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], scheduledHosts: Map<string, ScheduledHost>, count = 1) {
+  const procedureQueue: QueuedProcedure[] = [];
+  const scheduledHostsArr = Array.from(scheduledHosts.values());
+
+  for (const scheduledHost of scheduledHostsArr) {
+    const host = scheduledHost.host;
+
+    // Remove old procedures that have ended
+    scheduledHost.runningProcedures.forEach((procedure, key) => {
+      if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
+    })
+    
+    const runningProcedures = Array.from(scheduledHost.runningProcedures.values());
+    const nextEndingProcedure = runningProcedures[0] || { timeStarted: 0, procedure: { totalDuration: 0 } };
+    const nextEndingTime = nextEndingProcedure.timeStarted + nextEndingProcedure.procedure.totalDuration;
+    // Switch assigned procedure if needed.
+    const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
+    if (readyToExploit) {
+      ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
+      scheduledHost.assignedProcedure = 'exploit';
+    } else if(Date.now() < nextEndingTime) {
+      ns.print(`WARN: ${host} switching from EXPLOIT to PREPARE.`);
+      scheduledHost.assignedProcedure = 'prepare';
+    }
+
+
+    // Queue prepare procedures
+    if(scheduledHost.assignedProcedure === 'prepare') {
+      const procedure = getProcedure(ns, scheduledHost);
+      procedureQueue.push({
+        host,
+        procedure,
+      });
+    }
+    // Queue exploit procedures
+    if(scheduledHost.assignedProcedure === 'exploit') {
+      const procedure = getProcedure(ns, scheduledHost);
+      procedureQueue.push({
+        host: scheduledHost.host,
+        procedure,
+      });
+    }
+  }
+    
+  
+  // Execution loop, empty the queue until we OOM
+  const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
+  let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
+  while (procedureQueue.length > 0) {
+    const currentProcedure = procedureQueue.shift() as QueuedProcedure;
+    const currentHost = scheduledHosts.get(currentProcedure.host) as ScheduledHost;
+    if (currentProcedure.procedure.totalRamNeeded < totalAvailableRam) {
+          const processId = shortId();
+          const newProcesses = await runProcedure(ns, processId, currentProcedure, controlledHostsWithMetadata);
+          currentHost.runningProcedures.set(processId, {
+            processId,
+            processes: newProcesses, 
+            timeStarted: Date.now(),
+            procedure: currentProcedure.procedure,
+          });
+          ns.print(`INFO: STARTED ${currentHost.assignedProcedure}@${currentProcedure.host}, *** ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s *** ${(currentProcedure.procedure.totalRamNeeded).toFixed(0)}GB Used`);
+          totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
+    } else {
+      procedureQueue.unshift(currentProcedure);
+      break;
+    }
+  }
+
+  if (procedureQueue.length === 0 && controlledHostsWithMetadata.length > 1 && queueAndExecutesPerLoop < 10) { 
+    await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts, count + 1);
+  }
+}
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  let procedureLimit = 50;
+  
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
-    await ns.sleep(500);
+    await ns.sleep(30);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
     const exploitableHosts = randomArrayShuffle((readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse());
-    const procedureQueue: QueuedProcedure[] = [];
     
     exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
-    const scheduledHostsArr = Array.from(scheduledHosts.values());
 
-    // Only attempt to queue new Procedures if our queue depth is shallow.
-    if (procedureQueue.length < scheduledHostsArr.length || procedureQueue.length == 0) {
-      for (const scheduledHost of scheduledHostsArr) {
-        // If needed, move the host to the exploit Procedure now that it is prepared.
-        const host = scheduledHost.host;
-        const nextEndingProcedure = Array.from(scheduledHost.runningProcedures.values())[0];
-        const nextEndTime = nextEndingProcedure ? nextEndingProcedure.timeStarted : Date.now();
-        const nowPlusSafetyBuffer = Date.now() + procedureSafetyBufferMs;
-        const isAlreadyWeakened = ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + 5;
-        const isAlreadyGrown = ns.getServerMaxMoney(host) * 0.20 < ns.getServerMoneyAvailable(host);
-        if (isAlreadyWeakened && isAlreadyGrown && nextEndTime < nowPlusSafetyBuffer &&  scheduledHost.assignedProcedure === 'prepare') {
-              scheduledHost.assignedProcedure = 'exploit';
-              endAllRunningProcedures(ns, scheduledHost);
-          ns.tprint(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
-        } else if ((!isAlreadyWeakened || !isAlreadyGrown) && nextEndTime < nowPlusSafetyBuffer && scheduledHost.assignedProcedure === 'exploit') {
-          ns.tprint(`WARN: ${host} switching from EXPLOIT to PREPARE. Weakened: ${isAlreadyWeakened}, Grown: ${isAlreadyGrown}`);
-          scheduledHost.assignedProcedure = 'prepare';
-          endAllRunningProcedures(ns, scheduledHost);
-        }
-  
-        // Remove old procedures that have ended
-        scheduledHost.runningProcedures.forEach((procedure, key) => {
-          if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
-        })
-  
-        // Queue prepare procedures
-        if(scheduledHost.runningProcedures.size < procedureLimit && scheduledHost.assignedProcedure === 'prepare') {
-          const procedure = getProcedure(ns, scheduledHost);
-          procedureQueue.push({
-            host,
-            procedure,
-          });
-        }
-        // Queue exploit procedures
-        if(scheduledHost.runningProcedures.size < procedureLimit && scheduledHost.assignedProcedure === 'exploit') {
-          const procedure = getProcedure(ns, scheduledHost);
-          procedureQueue.push({
-            host: scheduledHost.host,
-            procedure,
-          });
-        }
-      }
-    } else {
-      const message = 'queue depth at maximum'
-      ns.print(message);
-      intermittentLog(ns, message, true);
-      continue;
-    }
+    await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
 
-    // Execution loop, empty the queue until we OOM
-    const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
-    let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
-    while (procedureQueue.length > 0) {
-      const currentProcedure = procedureQueue.shift() as QueuedProcedure;
-      const currentHost = scheduledHosts.get(currentProcedure.host) as ScheduledHost;
-      const hostRunningProceduresArr = Array.from(currentHost.runningProcedures.values());
-      const expectedEndTimes = hostRunningProceduresArr
-        .map(({timeStarted, procedure}) => timeStarted + procedure.totalDuration);
-      const futureProcedureEstimatedEnd = Date.now() + currentProcedure.procedure.totalDuration + procedureSafetyBufferMs;
-      if (currentProcedure.procedure.totalRamNeeded < totalAvailableRam
-          && expectedEndTimes.every((time) => time < futureProcedureEstimatedEnd)) {
-            const processId = shortId();
-            const newProcesses = await runProcedure(ns, processId, currentProcedure, controlledHostsWithMetadata);
-            currentHost.runningProcedures.set(processId, {
-              processId,
-              processes: newProcesses, 
-              timeStarted: Date.now(),
-              procedure: currentProcedure.procedure,
-            });
-            ns.print(`INFO: STARTED ${currentHost.assignedProcedure}@${currentProcedure.host}, *** ${(currentProcedure.procedure.totalDuration / 1000).toFixed(0)}s *** ${(currentProcedure.procedure.totalRamNeeded).toFixed(0)}GB Used`);
-            totalAvailableRam -= currentProcedure.procedure.totalRamNeeded;
-      } else {
-        procedureQueue.unshift(currentProcedure);
-        break;
-      }
-    }
-
-    if (scheduledHostsArr.every((scheduledHost) => scheduledHost.runningProcedures.size === procedureLimit)) {
-      ns.tprint(`INFO: Procedure limit increased, was ${procedureLimit - 1}, now ${procedureLimit}.`);
-      procedureLimit += 1;
-    }
-
-    intermittentLog(ns, `INFO:\nScheduler Report ${new Date().toLocaleTimeString()}:\nqueue depth - ${procedureQueue.length}\n-----------------\n${scheduledHostsArr
+    logger.info(ns, 'schedulerReport', `\nScheduler Report ${new Date().toLocaleTimeString()}:\n-----------------\n${Array.from(scheduledHosts.values())
       .map((scheduledHost) => `* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}`)
       .join('\n')}`);
   }
