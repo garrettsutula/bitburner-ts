@@ -13,5 +13,9 @@ export function isAlreadyGrown(ns: NS, host: string) {
 }
 
 export function percentWeakened(ns: NS, host: string) {
-  return (ns.getServerSecurityLevel(host) / (ns.getServerBaseSecurityLevel(host) - ns.getServerMinSecurityLevel(host)) * 100).toFixed(2);
+  return ((ns.getServerSecurityLevel(host) / (ns.getServerBaseSecurityLevel(host) - ns.getServerMinSecurityLevel(host))) * 100).toFixed(2);
+}
+
+export function percentMaxMoney(ns: NS, host: string) {
+  return ((ns.getServerMoneyAvailable(host) / ns.getServerMaxMoney(host)) * 100).toFixed(2);
 }

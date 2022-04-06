@@ -9,9 +9,7 @@ import { prepareSchedule } from 'scheduler/stages/prepare';
 import { scheduleAcrossHosts } from 'lib/process';
 import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
-import { isAlreadyGrown, isAlreadyWeakened, percentWeakened } from '/lib/metrics';
-
-let queueAndExecutesPerLoop = 0;
+import { isAlreadyGrown, isAlreadyWeakened, percentWeakened, percentMaxMoney } from '/lib/metrics';
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -122,15 +120,12 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
   }
 
   if (procedureQueue.length === 0 && controlledHostsWithMetadata.length > 1 && count < 10) { 
-    logger.info(ns, 'executeLoopIncrease', `Increasing execute loops per tick because we have remaining RAM after all ${queueAndExecutesPerLoop} current loops.`,);
-    queueAndExecutesPerLoop += 1;
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts, count + 1);
   }
 }
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  queueAndExecutesPerLoop = 1;
   
   const scheduledHosts = new Map<string, ScheduledHost>();
 
@@ -139,14 +134,14 @@ export async function main(ns : NS) : Promise<void> {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
     await ns.sleep(30);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).slice(0,3);
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
     
     exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
 
     logger.info(ns, 'schedulerReport', `\nScheduler Report ${new Date().toLocaleTimeString()}:\n-----------------\n${Array.from(scheduledHosts.values())
-      .map((scheduledHost) => `* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}${scheduledHost.assignedProcedure === 'prepare' ? ` ${percentWeakened(ns, scheduledHost.host)}% progress`: ''}`)
+      .map((scheduledHost) => `* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}${scheduledHost.assignedProcedure === 'prepare' ? ` ${percentWeakened(ns, scheduledHost.host)}% weaken progress, ${percentMaxMoney(ns, scheduledHost.host)}% max money`: ''}`)
       .join('\n')}`);
   }
 }
