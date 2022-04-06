@@ -11,3 +11,7 @@ export function isAlreadyWeakened(ns: NS, host: string) {
 export function isAlreadyGrown(ns: NS, host: string) {
   return ns.getServerMaxMoney(host) * maxServerMoneyPct <= ns.getServerMoneyAvailable(host);
 }
+
+export function percentWeakened(ns: NS, host: string) {
+  return (ns.getServerSecurityLevel(host) / (ns.getServerBaseSecurityLevel(host) - ns.getServerMinSecurityLevel(host)) * 100).toFixed(2);
+}
