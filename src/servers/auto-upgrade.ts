@@ -1,4 +1,5 @@
 import { NS } from '@ns';
+import { readJson, writeJson } from '/lib/file';
 
 export async function main(ns: NS): Promise<void> {
   const baseName = "gserv-";
@@ -37,6 +38,8 @@ export async function main(ns: NS): Promise<void> {
           }
           else {
               current = queue.dequeue();
+              const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[];
+              await writeJson(ns, '/data/controlledHosts.txt', controlledHosts.filter((host) => host !== current));
               ns.killall(current);
               ns.deleteServer(current);
           }
@@ -48,7 +51,7 @@ export async function main(ns: NS): Promise<void> {
           queue.enqueue(newBox);
       }
 
-      await ns.asleep(1000);
+      await ns.asleep(120000);
   }
 }
 
