@@ -363,6 +363,54 @@ function recursiveGetExpressions([input, target]: [input: string, target: number
   return res;
 }
 
+function fixParentheses(expression: string) {
+  if (expression.length === 0) return [''];
+  /** @type {(x: string) => boolean} */
+  function sanitary(value: string): boolean {
+    let open = 0;
+    for (const char of value) {
+      if (char === '(') open++;
+      else if (char === ')') open--;
+      if (open < 0) return false;
+    }
+    return open === 0;
+  }
+  /** @type {string[]} */
+  const queue = [expression];
+  const tested = new Set();
+  tested.add(expression);
+  let found = false;
+  const solution = [];
+  while (queue.length > 0) {
+    expression = queue.shift() as string;
+    if (sanitary(expression)) {
+      solution.push(expression);
+      found = true;
+    }
+    if (found) continue;
+    for (let i = 0; i < expression.length; i++) {
+      if (expression.charAt(i) !== '(' && expression.charAt(i) !== ')')
+        continue;
+      const stripped = expression.slice(0, i) + expression.slice(i + 1);
+      if (!tested.has(stripped)) {
+        queue.push(stripped);
+        tested.add(stripped);
+      }
+    }
+  }
+  return solution;
+}
+
+ function canJump(nums: number[]) {
+  const len = nums.length;
+  let max = 0;
+  for (let i = 0; i < len; i++) {
+    if (i > max) return false;
+    max = Math.max(max, i + nums[i]);
+  }
+  return true;
+}
+
 
 function solve(type: string, data: any, server: string, contract: string, ns: NS) {
   let solution;
@@ -409,6 +457,12 @@ function solve(type: string, data: any, server: string, contract: string, ns: NS
       break;
     case 'Subarray with Maximum Sum':
       solution=maxSubArray(data);
+      break;
+    case 'Sanitize Parentheses in Expression':
+      solution=fixParentheses(data);
+      break;
+    case 'Array Jumping Game':
+      solution=canJump(data);
       break;
     default:
       return '';
