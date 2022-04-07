@@ -18,11 +18,11 @@ function getDocument () {
   return [].map.constructor('return this.document')()
 }
 
-let lastFactor: number
-let _ns: NS, _doc: Document, _win: any
+let lastFactor
+let _ns, _doc, _win
 
-let lastLog: string;
-function logStable (str: string) {
+let lastLog
+function logStable (str) {
   if (str === lastLog) return
   _ns.print(str)
   console.log(str)
@@ -39,14 +39,14 @@ function setTimeFactor (factor = 1) {
     lastFactor = factor
     return true
   }
-  _win.setTimeout = function (fn: any, delay: number, ...args: any) {
+  _win.setTimeout = function (fn, delay, ...args) {
     if (delay < maxDelayCutoff) {
       _win._setTimeout(fn, Math.round(delay * factor), ...args)
     } else {
       _win._setTimeout(fn, delay, ...args)
     }
   }
-  _win.setInterval = function (fn: any, delay: number, ...args: any) {
+  _win.setInterval = function (fn, delay, ...args) {
     if (delay < maxDelayCutoff) {
       _win._setInterval(fn, Math.round(delay * factor), ...args)
     } else {
@@ -71,7 +71,7 @@ function autoSetTimeFactor () {
 }
 
 // navigation functions for MinesweeperGame and Cyberpunk2077Game
-function getPathSingle (size: number, startPt: number[], endPt: number[]) {
+function getPathSingle (size, startPt, endPt) {
   // handle wrapping
   for (let i = 0; i <= 1; i++) {
     if (Math.abs(startPt[i] - endPt[i]) > size / 2) {
@@ -106,7 +106,7 @@ function getPathSingle (size: number, startPt: number[], endPt: number[]) {
 //   }
 // }
 
-function getPathSequential (size: number, points: Array<number[]>, start = [0, 0]) {
+function getPathSequential (size, points, start = [0, 0]) {
   const ret = []
   const routePoints = [start, ...points]
   for (let i = 0; i < routePoints.length - 1; i++) {
@@ -115,7 +115,7 @@ function getPathSequential (size: number, points: Array<number[]>, start = [0, 0
   return ret
 }
 
-function getGridX (node: any) {
+function getGridX (node) {
   let x = 0
   while (node.previousSibling !== null) {
     node = node.previousSibling
@@ -124,7 +124,7 @@ function getGridX (node: any) {
   return x
 }
 
-function getGridY (node: any) {
+function getGridY (node) {
   let y = 0
   node = node.parentNode.parentNode
   while (node.previousSibling?.tagName === 'DIV') {
@@ -135,10 +135,7 @@ function getGridY (node: any) {
 }
 
 class InfiltrationManager {
-  ws: WebSocket;
-  automationEnabled: boolean;
-  
-  constructor (ns: NS) {
+  constructor (ns) {
     const self = this
     /* eslint-disable no-undef */
     self.ws = new WebSocket(socketUrl)
@@ -398,7 +395,7 @@ class InfiltrationManager {
   }
 }
 
-export async function main (ns:NS): Promise<void> {
+export async function main (ns) {
   ns.disableLog('ALL')
   _ns = ns
   _doc = getDocument()
