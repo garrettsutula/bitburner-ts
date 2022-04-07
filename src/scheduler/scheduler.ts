@@ -51,7 +51,7 @@ async function runProcedure(ns: NS, processId: string, currentProcedure: QueuedP
   const newProcesses = [];
   const {host, procedure: { steps }} = currentProcedure;
   for (const step of steps) {    
-    newProcesses.push(...(await scheduleAcrossHosts(ns, controlledHosts, step.script, step.threadsNeeded, host, step.delay || 0, processId)));
+    newProcesses.push(...(await scheduleAcrossHosts(ns, controlledHosts, step.script, step.threadsNeeded, host, step.delay || 0, processId, step.ordinal)));
   }
   return newProcesses;
 }
