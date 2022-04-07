@@ -1,39 +1,46 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
-const throttleRatio = 0.1;
-const hackPercentage = 0.05;
-const stepBuffer = 75;
+import { calculationParameters } from '/scheduler/config';
+
+const { throttleRatio, hackPercentage, stepBuffer } = calculationParameters;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
   const duration = ns.getWeakenTime(host);
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = Math.ceil((securityLevel * 1.10) / 0.05 * throttleRatio);
+  const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05 * throttleRatio));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
+  if (ramNeeded === Infinity) {
+    console.log('wtf');
+  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded }
 }
 
-export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
+export function calculateGrow(ns: NS, ordinal: number, host: string, script: string): ProcedureStep {
   const duration = ns.getGrowTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
-  const growthFactor = ((throttleRatio * maxMoney * hackPercentage * 1.10) / (maxMoney)) + 1;
+  const growthFactor = ((throttleRatio * maxMoney * hackPercentage * 1.05) / (maxMoney)) + 1;
   // TODO: pass cores as param
-  // TODO: fix the magic ratio here, we have been overhacking and this is temp fix
   const threadsNeeded = Math.ceil(ns.growthAnalyze(host, growthFactor < 1 ? 1.05 : growthFactor, 1));
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
+  if (ramNeeded === Infinity) {
+    console.log('wtf');
+  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
 }
-
+ 
 export function calculateHack(ns: NS, ordinal: number, host: string, script: string): ProcedureStep {
   const duration = ns.getHackTime(host);
-  const moneyAvailable = ns.getServerMoneyAvailable(host);
+  const maxMoney = ns.getServerMaxMoney(host);
   // TODO: pass cores as param
-  // TODO fix magic ratios here, we have been over-hacking and putting the host in a bad state
-  const threadsNeeded = calculateHackThreads(ns, host, moneyAvailable * hackPercentage * throttleRatio * 0.5);
+  const threadsNeeded = calculateHackThreads(ns, host, maxMoney * hackPercentage * throttleRatio);
   const securityLevelIncrease = ns.hackAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
+  if (ramNeeded === Infinity) {
+    console.log('wtf');
+  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
 }
 
@@ -62,8 +69,8 @@ export function calculateStepsDuration(steps: ProcedureStep[]): number {
 function calculateHackThreads(ns: NS, host: string, hackAmount: number) {
   const balanceFactor = 240;
   const bitnodeMultiplier = 0.2 // WARN: CHANGE ME, THIS IS FOR BITNODE 4
-  const currentMoney = ns.getServerMoneyAvailable(host);
-  const hackDifficulty = ns.getServerSecurityLevel(host);
+  const currentMoney = ns.getServerMaxMoney(host);
+  const hackDifficulty = ns.getServerMinSecurityLevel(host);
   const difficultyMultiplier = (100 - hackDifficulty) / 100;
   const hackingLevel = ns.getHackingLevel();
   const requiredHackingLevel = ns.getServerRequiredHackingLevel(host);

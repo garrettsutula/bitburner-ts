@@ -9,7 +9,11 @@ import { prepareSchedule } from 'scheduler/stages/prepare';
 import { scheduleAcrossHosts } from 'lib/process';
 import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
-import { isAlreadyGrown, isAlreadyWeakened, percentWeakened, percentMaxMoney } from '/lib/metrics';
+import { isAlreadyGrown, isAlreadyWeakened} from '/lib/metrics';
+import { schedulerParameters } from '/scheduler/config';
+let currentAttackLimit = 1;
+
+const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs } = schedulerParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -20,7 +24,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
       runningProcedures: new Map(),
       queued: false,
     })
-
+    return 'exploit';
   } else {
     scheduledHosts.set(host, {
       host,
@@ -28,6 +32,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
       runningProcedures: new Map(),
       queued: false,
     })
+    return 'prepare';
   }
 }
 
@@ -63,39 +68,27 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
       if(procedure.timeStarted + procedure.procedure.totalDuration < Date.now()) scheduledHost.runningProcedures.delete(key);
     })
     
-    const runningProcedures = Array.from(scheduledHost.runningProcedures.values());
-    const nextEndingProcedure = runningProcedures[0] || { timeStarted: 0, procedure: { totalDuration: 0 } };
-    const nextEndingTime = nextEndingProcedure.timeStarted + nextEndingProcedure.procedure.totalDuration;
     // Switch assigned procedure if needed.
-    const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
+    const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host) && scheduledHost.assignedProcedure === 'prepare';
     if (readyToExploit) {
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
-    } else if(Date.now() < nextEndingTime) {
-      ns.print(`WARN: ${host} switching from EXPLOIT to PREPARE.`);
-      scheduledHost.assignedProcedure = 'prepare';
+      currentAttackLimit += 1;
     }
 
+    const runningProcedures = Array.from(scheduledHost.runningProcedures.values());
+    const lastEndingProcedure = runningProcedures[runningProcedures.length - 1];
+    const lastEndingTime = lastEndingProcedure ? lastEndingProcedure.timeStarted + lastEndingProcedure.procedure.totalDuration : 0;
 
-    // Queue prepare procedures, only queue if this procedure has the same or fewer running procedures running than every other one.
-    if(scheduledHost.assignedProcedure === 'prepare' && scheduledHostsArr.every((compareHost) => scheduledHost.runningProcedures.size <= compareHost.runningProcedures.size)) {
-      const procedure = getProcedure(ns, scheduledHost);
+    const procedure = getProcedure(ns, scheduledHost);
+    if (lastEndingTime + executionBufferMs < Date.now() + procedure.totalDuration) {
       procedureQueue.push({
         host,
         procedure,
       });
     }
-    // Queue prepare procedures, only queue if this procedure has the same or fewer running procedures running than every other one.
-    if(scheduledHost.assignedProcedure === 'exploit' && scheduledHostsArr.every((compareHost) => scheduledHost.runningProcedures.size <= compareHost.runningProcedures.size)) {
-      const procedure = getProcedure(ns, scheduledHost);
-      procedureQueue.push({
-        host: scheduledHost.host,
-        procedure,
-      });
-    }
   }
     
-  
   // Execution loop, empty the queue until we OOM
   const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
   let totalAvailableRam = controlledHostsWithMetadata.reduce((acc, {availableRam}) => acc + availableRam, 0);
@@ -118,30 +111,44 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
       break;
     }
   }
-
-  if (procedureQueue.length === 0 && controlledHostsWithMetadata.length > 1 && count < 10) { 
+  
+  if (procedureQueue.length === 0 && controlledHostsWithMetadata.length > 1 && count < queueAndExecutesPerTick) { 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts, count + 1);
   }
+  
+  const hostsCurrentlyExploiting = scheduledHostsArr.filter((host) => host.assignedProcedure === 'exploit').length;
+  if (hostsCurrentlyExploiting > currentAttackLimit) {
+    currentAttackLimit = hostsCurrentlyExploiting;
+  }
+
 }
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
+  currentAttackLimit = baseAttackLimit;
   
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
 
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
-    await ns.sleep(30);
+    await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).splice(0, currentAttackLimit);
     
-    exploitableHosts.forEach((host) => setInitialSchedule(ns, host, scheduledHosts));
+    exploitableHosts.forEach((host) => {
+      const procedure = setInitialSchedule(ns, host, scheduledHosts);
+      if(procedure === 'exploit') currentAttackLimit += 1;
+    });
+
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
 
-    logger.info(ns, 'schedulerReport', `\nScheduler Report ${new Date().toLocaleTimeString()}:\n-----------------\n${Array.from(scheduledHosts.values())
-      .map((scheduledHost) => `* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}${scheduledHost.assignedProcedure === 'prepare' ? ` ${percentWeakened(ns, scheduledHost.host)}% weaken progress, ${percentMaxMoney(ns, scheduledHost.host)}% max money`: ''}`)
+    logger.info(ns, 'schedulerReport', `
+    Scheduler Report ${new Date().toLocaleTimeString()}:
+    -----------------
+    ${Array.from(scheduledHosts.values())
+      .map((scheduledHost) => logger.scheduledHostStatus(ns, scheduledHost))
       .join('\n')}`);
   }
 }

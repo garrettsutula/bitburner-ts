@@ -4,18 +4,19 @@ const maxServerMoneyPct = 0.90;
 // Hosts need to be weakened if their current security is above this times the multiplier
 const minSecurityMultiplier = 1.8;
 
-export function isAlreadyWeakened(ns: NS, host: string) {
+export function isAlreadyWeakened(ns: NS, host: string): boolean {
   return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) * minSecurityMultiplier;
 }
 
-export function isAlreadyGrown(ns: NS, host: string) {
+export function isAlreadyGrown(ns: NS, host: string): boolean {
   return ns.getServerMaxMoney(host) * maxServerMoneyPct <= ns.getServerMoneyAvailable(host);
 }
 
-export function percentWeakened(ns: NS, host: string) {
-  return ((ns.getServerSecurityLevel(host) / (ns.getServerBaseSecurityLevel(host) - ns.getServerMinSecurityLevel(host))) * 100).toFixed(2);
+export function percentWeakened(ns: NS, host: string): string {
+  const pctToGoal = ((ns.getServerSecurityLevel(host) - ns.getServerMinSecurityLevel(host)) / ns.getServerSecurityLevel(host)) + 1;
+  return (pctToGoal * 100).toFixed(2);
 }
 
-export function percentMaxMoney(ns: NS, host: string) {
+export function percentMaxMoney(ns: NS, host: string): string {
   return ((ns.getServerMoneyAvailable(host) / ns.getServerMaxMoney(host)) * 100).toFixed(2);
 }
