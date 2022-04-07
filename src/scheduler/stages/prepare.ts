@@ -8,7 +8,7 @@ const scriptPaths = {
 
 export function prepareSchedule(ns: NS, host: string): Procedure {
   const weaken = calculateWeaken(ns, 1, host, scriptPaths.weaken);
-  const grow = calculateGrow(ns, 2, host, scriptPaths.grow, true);
+  const grow = calculateGrow(ns, 2, host, scriptPaths.grow);
   const secondWeaken = calculateWeaken(ns, 3, host, scriptPaths.weaken, grow.securityLevelIncrease);
 
   weaken.delay = calculateWeakenDelay(ns, host, weaken.ordinal);
