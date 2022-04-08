@@ -5,9 +5,10 @@ export const calculationParameters = {
   // Global throttling ratio, useful early game.
   throttleRatio: 1,
   // Target % of money to hack from the server each procedure.
-  hackPercentage: 0.50,
+  hackPercentage: 0.75,
+  prepareGrowPercentage: 0.20,
   // Execution buffer between steps
-  stepBuffer: 50,
+  stepBuffer: 20,
 }
 
 export const schedulerParameters = {
@@ -20,5 +21,7 @@ export const schedulerParameters = {
   // When a server is done being prepared, we increase this by one to move on to the next host.
   baseAttackLimit: 1,
   // Buffer ensure procedure execution doesn't overlap.
-  executionBufferMs: 200,
+  executionBufferMs: 1000,
+  // When set to false, immediately target all hosts we can
+  respectAttackLimit: false,
 }

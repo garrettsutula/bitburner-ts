@@ -10,10 +10,11 @@ import { scheduleAcrossHosts } from 'lib/process';
 import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
 import { isAlreadyGrown, isAlreadyWeakened} from '/lib/metrics';
-import { schedulerParameters } from '/scheduler/config';
+import { schedulerParameters, calculationParameters } from '/scheduler/config';
 let currentAttackLimit = 1;
 
-const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs } = schedulerParameters;
+const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs, respectAttackLimit } = schedulerParameters;
+const { prepareGrowPercentage } = calculationParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -82,11 +83,20 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
     const procedure = getProcedure(ns, scheduledHost);
     if (lastEndingTime + executionBufferMs < Date.now() + procedure.totalDuration) {
-      procedureQueue.push({
-        host,
-        procedure,
-      });
+      if (scheduledHost.assignedProcedure === 'prepare' && scheduledHost.runningProcedures.size < Math.ceil(1/prepareGrowPercentage)) {
+        procedureQueue.push({
+          host,
+          procedure,
+        });
+      } else if (scheduledHost.assignedProcedure === 'exploit') {
+        procedureQueue.push({
+          host,
+          procedure,
+        });
+      }
     }
+
+
   }
     
   // Execution loop, empty the queue until we OOM
@@ -134,7 +144,7 @@ export async function main(ns : NS) : Promise<void> {
     // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).splice(0, currentAttackLimit);
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]) //.splice(0, respectAttackLimit ? currentAttackLimit : 9999);
     
     exploitableHosts.forEach((host) => {
       const procedure = setInitialSchedule(ns, host, scheduledHosts);

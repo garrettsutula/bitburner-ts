@@ -26,7 +26,7 @@ export async function scheduleAcrossHosts(
 
     jobThreads -= numThisHost;
     if (numThisHost > 0) {
-      await execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, ...args);
+      execa(ns, jobScript, controlledHostsWithMetadata[0].host, numThisHost, ...args);
       startedProcesses.push({ host: controlledHostsWithMetadata[0].host, script: jobScript, args });
     }
 

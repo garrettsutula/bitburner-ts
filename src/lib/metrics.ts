@@ -1,11 +1,11 @@
 import { NS } from '@ns';
 // Servers need to be prepared if below this % money
-const maxServerMoneyPct = 0.90;
+const maxServerMoneyPct = 0.99;
 // Hosts need to be weakened if their current security is above this times the multiplier
-const minSecurityMultiplier = 1.8;
+const minSecurityBuffer = 2;
 
 export function isAlreadyWeakened(ns: NS, host: string): boolean {
-  return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) * minSecurityMultiplier;
+  return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + minSecurityBuffer;
 }
 
 export function isAlreadyGrown(ns: NS, host: string): boolean {
