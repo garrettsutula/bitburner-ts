@@ -1,6 +1,6 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
-import { calculationParameters } from '/scheduler/config';
+import { calculationParameters } from 'scheduler/config';
 
 const { throttleRatio, hackPercentage, stepBuffer, prepareGrowPercentage } = calculationParameters;
 

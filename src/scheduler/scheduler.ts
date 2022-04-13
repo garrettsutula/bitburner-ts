@@ -10,7 +10,7 @@ import { scheduleAcrossHosts } from 'lib/process';
 import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
 import { isAlreadyGrown, isAlreadyWeakened} from '/lib/metrics';
-import { schedulerParameters, calculationParameters } from '/scheduler/config';
+import { schedulerParameters, calculationParameters } from 'scheduler/config';
 let currentAttackLimit = 1;
 
 const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs, respectAttackLimit } = schedulerParameters;
@@ -75,6 +75,8 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
       currentAttackLimit += 1;
+    } else if (!isAlreadyWeakened(ns, host) || !isAlreadyGrown(ns, host)) {
+      scheduledHost.assignedProcedure = 'prepare';
     }
 
     const runningProcedures = Array.from(scheduledHost.runningProcedures.values());
