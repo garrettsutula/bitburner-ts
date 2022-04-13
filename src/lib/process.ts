@@ -1,7 +1,7 @@
 import { NS } from '@ns'
-import { execa } from 'lib/exec';
-import { Process } from 'models/process'
-import { ControlledServers } from 'models/server';
+import { execa } from './exec';
+import { Process } from '/models/process'
+import { ControlledServers } from '/models/server';
 import { Args } from '/models/utility';
 
 export function killProcesses(ns: NS, processes: Process[]): boolean[] {

@@ -1,4 +1,6 @@
-export function randomArrayShuffle(array: any[]) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export function randomArrayShuffle(array: any[]): any[] {
   let currentIndex = array.length, temporaryValue, randomIndex;
   while (0 !== currentIndex) {
     randomIndex = Math.floor(Math.random() * currentIndex);

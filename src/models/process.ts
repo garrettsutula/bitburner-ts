@@ -1,5 +1,3 @@
-import { Args } from '/models/utility';
-
 export interface Process {
   host: string;
   script: string;

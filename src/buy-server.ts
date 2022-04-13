@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 
 export async function main(ns : NS) : Promise<void> {
-  const ram = (ns.args[0] as number) || 8192;
+  const ram = 16384;
   const intervalSeconds = 15 * 1000;
   ns.disableLog('sleep');
   ns.disableLog('getServerMoneyAvailable');

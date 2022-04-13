@@ -1,6 +1,6 @@
 import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
-import { calculationParameters } from 'scheduler/config';
+import { calculationParameters } from '/config';
 
 const { throttleRatio, hackPercentage, stepBuffer, prepareGrowPercentage } = calculationParameters;
 
@@ -11,23 +11,17 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
   const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05 * throttleRatio));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  if (ramNeeded === Infinity) {
-    console.log('wtf');
-  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded }
 }
 
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = calculateGrowTime(ns, host);
   const maxMoney = ns.getServerMaxMoney(host);
-  const growthFactor = ((throttleRatio * maxMoney * (1 + hackPercentage + 0.20)) / (maxMoney)) + 1;
+  const growthFactor = 1 / (1-hackPercentage-0.05);
   // TODO: pass cores as param
   const threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowPercentage : growthFactor , 1));
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  if (ramNeeded === Infinity) {
-    console.log('wtf');
-  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
 }
  
@@ -38,9 +32,6 @@ export function calculateHack(ns: NS, ordinal: number, host: string, script: str
   const threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage * throttleRatio);
   const securityLevelIncrease = ns.hackAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  if (ramNeeded === Infinity) {
-    console.log('wtf');
-  }
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
 }
 
@@ -68,7 +59,7 @@ export function calculateStepsDuration(steps: ProcedureStep[]): number {
 
 function calculateHackThreads(ns: NS, host: string, hackAmount: number) {
   const balanceFactor = 240;
-  const bitnodeMultiplier = 1 // WARN: CHANGE ME, THIS IS FOR BITNODE 4
+  const bitnodeMultiplier = ns.getBitNodeMultipliers().HackingLevelMultiplier;
   const currentMoney = ns.getServerMaxMoney(host);
   const hackDifficulty = ns.getServerMinSecurityLevel(host);
   const difficultyMultiplier = (100 - hackDifficulty) / 100;

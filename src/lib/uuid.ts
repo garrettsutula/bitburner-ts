@@ -1,4 +1,4 @@
-export function shortId(length = 3) {
+export function shortId(length = 3): string {
   let result           = '';
   const characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const charactersLength = characters.length;

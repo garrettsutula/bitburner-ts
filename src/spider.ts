@@ -1,6 +1,6 @@
 import { NS } from '@ns'
-import { writeJson } from 'lib/file';
-import { disableLogs } from 'lib/logs';
+import { writeJson } from '/lib/file';
+import { disableLogs } from '/lib/logger';
 // Managed by spider.js
 const discoveredHosts = new Set<string>();
 const rootedHosts = new Set<string>();
@@ -72,6 +72,8 @@ async function spider(ns: NS) {
   for(const host of controlledHostsArr) {
     await ns.scp(scripts, host);
   }
+
+  const pid = ns.run('/spider/backdoor.js')
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));

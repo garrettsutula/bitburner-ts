@@ -3,9 +3,13 @@ import { readJson, writeJson } from '/lib/file';
 
 export async function main(ns: NS): Promise<void> {
   const baseName = "gserv-";
-  let multi = 19; // assumes you need up to 8gb for your hack and distro script. you may be able to lower this accordingly.
+  let multi = 3; // assumes you need up to 8gb for your hack and distro script. you may be able to lower this accordingly.
 
   const servers = ns.getPurchasedServers();
+  if (servers.length > 0) {
+      const maxRam = servers.reduce((a, e) => Math.max(a, ns.getServerMaxRam(e)), 3);
+      while (Math.pow(2, multi) < maxRam) multi++;
+  }
 
   const queue = new Queue();
   for (let i = 0; i < servers.length; i++) {
@@ -19,7 +23,7 @@ export async function main(ns: NS): Promise<void> {
           ns.tprint("maxed on servers, killing process");
           return;
       }
-      await ns.sleep(50);
+
       const count = queue.length;
       const cash = ns.getPlayer().money;
       const ram = Math.min(Math.pow(2, 20), Math.pow(2, multi));
@@ -45,8 +49,9 @@ export async function main(ns: NS): Promise<void> {
           nameCounter++;
           const newBox = ns.purchaseServer(name, ram);
           queue.enqueue(newBox);
-          await ns.asleep(120000);
       }
+
+      await ns.asleep(50);
   }
 }
 

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NS } from '@ns';
-import { GenericObject } from 'models/utility';
+import { GenericObject } from '/models/utility';
 
 function replacer(key: string, value: any) {
   if(value instanceof Map) {

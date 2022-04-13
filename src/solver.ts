@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { readJson } from 'lib/file';
+import { readJson } from '/lib/file';
 
 export async function main(ns : NS) : Promise<void> {
   const contracts = readJson(ns, '/data/controlledHosts.txt').flatMap((server: string): string[] => {

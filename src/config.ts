@@ -1,12 +1,9 @@
-import { NS } from '@ns'
-
-
 export const calculationParameters = {
   // Global throttling ratio, useful early game.
-  throttleRatio: 0.2,
+  throttleRatio: 0.15,
   // Target % of money to hack from the server each procedure.
   hackPercentage: 0.20,
-  prepareGrowPercentage: 0.10,
+  prepareGrowPercentage: 0.30,
   // Execution buffer between steps
   stepBuffer: 15,
 }
@@ -25,3 +22,9 @@ export const schedulerParameters = {
   // When set to false, immediately target all hosts we can
   respectAttackLimit: false,
 }
+
+export const scriptPaths = {
+  hackOnce: '/scripts/hackOnce.js',
+  growOnce: '/scripts/growOnce.js',
+  weakenOnce: '/scripts/weakenOnce.js',
+};

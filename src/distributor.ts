@@ -1,11 +1,11 @@
 import { NS } from '@ns';
-import { shortId } from 'lib/uuid';
-import { readJson, writeJson } from 'lib/file';
-import { disableLogs } from 'lib/logs';
-import { RunningProcesses } from 'models/process';
-import { ControlledServers, ServerNotification } from 'models/server';
-import { killProcesses, scheduleAcrossHosts } from 'lib/process';
-import { Process } from 'models/process';
+import { shortId } from '/lib/uuid';
+import { readJson, writeJson } from '/lib/file';
+import { disableLogs } from 'lib/logger';
+import { RunningProcesses } from '/models/process';
+import { ControlledServers, ServerNotification } from '/models/server';
+import { killProcesses, scheduleAcrossHosts } from '/lib/process';
+import { Process } from '/models/process';
 
 const scriptPaths = {
   touch: '/spider/touch.js',

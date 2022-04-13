@@ -1,16 +1,16 @@
 import { NS } from '@ns';
-import { readJson } from 'lib/file';
-import { disableLogs } from 'lib/logs';
-import { shortId } from 'lib/uuid';
-import { QueuedProcedure, ScheduledHost } from 'models/procedure';
-import { ControlledServers } from 'models/server';
-import { exploitSchedule } from 'scheduler/stages/exploit';
-import { prepareSchedule } from 'scheduler/stages/prepare';
-import { scheduleAcrossHosts } from 'lib/process';
+import { readJson } from '/lib/file';
+import { disableLogs } from '/lib/logger';
+import { shortId } from '/lib/uuid';
+import { QueuedProcedure, ScheduledHost } from '/models/procedure';
+import { ControlledServers } from '/models/server';
+import { exploitSchedule } from '/lib/stages/exploit';
+import { prepareSchedule } from '/lib/stages/prepare';
+import { scheduleAcrossHosts } from '/lib/process';
 import { logger } from '/lib/logger';
 import { getControlledHostsWithMetadata } from '/lib/hosts';
 import { isAlreadyGrown, isAlreadyWeakened} from '/lib/metrics';
-import { schedulerParameters, calculationParameters } from 'scheduler/config';
+import { schedulerParameters, calculationParameters } from '/config';
 let currentAttackLimit = 1;
 
 const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs, respectAttackLimit } = schedulerParameters;

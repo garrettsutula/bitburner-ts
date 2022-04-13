@@ -12,11 +12,6 @@ export function isAlreadyGrown(ns: NS, host: string): boolean {
   return ns.getServerMaxMoney(host) * maxServerMoneyPct <= ns.getServerMoneyAvailable(host);
 }
 
-export function percentWeakened(ns: NS, host: string): string {
-  const pctToGoal = ((ns.getServerSecurityLevel(host) - ns.getServerMinSecurityLevel(host)) / ns.getServerSecurityLevel(host)) + 1;
-  return (pctToGoal * 100).toFixed(2);
-}
-
 export function percentMaxMoney(ns: NS, host: string): string {
   return ((ns.getServerMoneyAvailable(host) / ns.getServerMaxMoney(host)) * 100).toFixed(2);
 }

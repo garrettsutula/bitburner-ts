@@ -1,15 +1,12 @@
 import { NS } from '@ns'
-import { calculateWeaken, calculateGrow, calculateStepsDuration, calculateStepsRamNeeded, calculateWeakenDelay, calculateGrowDelay } from 'scheduler/stages/calculate'
+import { calculateWeaken, calculateGrow, calculateStepsDuration, calculateStepsRamNeeded, calculateWeakenDelay, calculateGrowDelay } from './calculate'
 import { Procedure } from '/models/procedure';
-const scriptPaths = {
-  weaken: '/scheduler/scripts/weakenOnce.js',
-  grow: '/scheduler/scripts/growOnce.js',
-};
+import { scriptPaths } from '/config';
 
 export function prepareSchedule(ns: NS, host: string): Procedure {
-  const weaken = calculateWeaken(ns, 1, host, scriptPaths.weaken);
-  const grow = calculateGrow(ns, 2, host, scriptPaths.grow);
-  const secondWeaken = calculateWeaken(ns, 3, host, scriptPaths.weaken, grow.securityLevelIncrease);
+  const weaken = calculateWeaken(ns, 1, host, scriptPaths.weakenOnce);
+  const grow = calculateGrow(ns, 2, host, scriptPaths.growOnce);
+  const secondWeaken = calculateWeaken(ns, 3, host, scriptPaths.weakenOnce, grow.securityLevelIncrease);
 
   weaken.delay = calculateWeakenDelay(ns, host, weaken.ordinal);
   grow.delay = calculateGrowDelay(ns, host);

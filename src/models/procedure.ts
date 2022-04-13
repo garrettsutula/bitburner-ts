@@ -1,4 +1,4 @@
-import { Process } from '/models/process';
+import { Process } from './process';
 
 export interface ProcedureStep {
   ordinal: number;
