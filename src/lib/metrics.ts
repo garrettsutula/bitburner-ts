@@ -1,6 +1,6 @@
 import { NS } from '@ns';
 // Servers need to be prepared if below this % money
-const maxServerMoneyPct = 0.99;
+const maxServerMoneyPct = 0.80;
 // Hosts need to be weakened if their current security is above this times the multiplier
 const minSecurityBuffer = 2;
 

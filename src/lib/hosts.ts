@@ -1,7 +1,7 @@
 import { NS } from '@ns';
 import { ControlledServers } from '/models/server';
 
-const minHomeRamAvailable = 256;
+const minHomeRamAvailable = 128;
 
 export function getControlledHostsWithMetadata(ns: NS, hosts: string[]): ControlledServers[] {
   return hosts.map((host) => {
