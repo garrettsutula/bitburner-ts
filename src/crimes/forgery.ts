@@ -5,7 +5,7 @@ export async function main(ns: NS): Promise<void> {
   while (true) {
     ns.tail();
     disableLogs(ns);
-    ns.commitCrime('mug someone');
+    ns.commitCrime('bond forgery');
     while(ns.isBusy()) {
       await ns.sleep(50);
     }
