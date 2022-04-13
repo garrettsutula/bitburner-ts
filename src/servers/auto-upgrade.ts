@@ -51,7 +51,7 @@ export async function main(ns: NS): Promise<void> {
           queue.enqueue(newBox);
       }
 
-      await ns.asleep(120000);
+      await ns.asleep(10000);
   }
 }
 
