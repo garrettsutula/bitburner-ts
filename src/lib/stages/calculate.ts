@@ -2,7 +2,7 @@ import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 import { calculationParameters } from '/config';
 
-const { throttleRatio, hackPercentage, stepBuffer, prepareGrowPercentage } = calculationParameters;
+const { throttleRatio, hackPercentage, stepBuffer, prepareGrowthFactor } = calculationParameters;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
   const duration = ns.getWeakenTime(host);
@@ -15,18 +15,17 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
 }
 
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
-  const duration = calculateGrowTime(ns, host);
-  const maxMoney = ns.getServerMaxMoney(host);
+  const duration = ns.getGrowTime(host);
   const growthFactor = 1 / (1-hackPercentage-0.05);
   // TODO: pass cores as param
-  const threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowPercentage : growthFactor , 1));
+  const threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowthFactor : growthFactor , 1));
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
 }
  
 export function calculateHack(ns: NS, ordinal: number, host: string, script: string): ProcedureStep {
-  const duration = calculateHackTime(ns, host);
+  const duration = ns.getHackTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
   // TODO: pass cores as param
   const threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage * throttleRatio);
@@ -36,11 +35,11 @@ export function calculateHack(ns: NS, ordinal: number, host: string, script: str
 }
 
 export function calculateHackDelay(ns: NS, host: string): number {
-  return ns.getWeakenTime(host) - calculateHackTime(ns, host, true) - stepBuffer;
+  return ns.getWeakenTime(host) - ns.getHackTime(host) - stepBuffer;
 }
 
 export function calculateGrowDelay(ns: NS, host: string): number {
-  return ns.getWeakenTime(host) - calculateGrowTime(ns, host) + stepBuffer;
+  return ns.getWeakenTime(host) - ns.getGrowTime(host) + stepBuffer;
 }
 
 export function calculateWeakenDelay(ns: NS, host: string, stepNumber: number): number {
@@ -72,32 +71,4 @@ function calculateHackThreads(ns: NS, host: string, hackAmount: number) {
   if ( percentMoneyHackedOneThread > 1 ) percentMoneyHackedOneThread = 1;
   if ( percentMoneyHackedOneThread === 0 || currentMoney === 0) return 0;
   return hackAmount / Math.floor(currentMoney * percentMoneyHackedOneThread);
-}
-
-function calculateHackTime(ns: NS, host: string, inMs = false) {
-  const {minDifficulty: hackDifficulty, requiredHackingSkill} = ns.getServer(host);
-  const { hacking: playerHackingLevel, hacking_speed_mult} = ns.getPlayer();
-  const difficultyMult = requiredHackingSkill * hackDifficulty;
-
-  const baseDiff = 500;
-  const baseSkill = 50;
-  const diffFactor = 2.5;
-  let skillFactor = diffFactor * difficultyMult + baseDiff;
-  // tslint:disable-next-line
-  skillFactor /= playerHackingLevel + baseSkill;
-
-  const hackTimeMultiplier = 5;
-  const hackingTime =
-    (hackTimeMultiplier * skillFactor) /
-    (hacking_speed_mult * 1);
-  if (inMs) return hackingTime * 1000;
-  return hackingTime;
-}
-
-function calculateWeakenTime(ns: NS, host: string) {
-  return calculateHackTime(ns, host) * 4 * 1000;
-}
-
-function calculateGrowTime(ns: NS, host: string) {
-  return calculateHackTime(ns, host) * 3.2 * 1000;
 }
