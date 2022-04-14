@@ -5,7 +5,7 @@ import { scriptPaths } from '/config';
 
 export function prepareSchedule(ns: NS, host: string): Procedure {
   const weaken = calculateWeaken(ns, 1, host, scriptPaths.weakenOnce);
-  const grow = calculateGrow(ns, 2, host, scriptPaths.growOnce);
+  const grow = calculateGrow(ns, 2, host, scriptPaths.growOnce, true);
   const secondWeaken = calculateWeaken(ns, 3, host, scriptPaths.weakenOnce, grow.securityLevelIncrease);
 
   weaken.delay = calculateWeakenDelay(ns, host, weaken.ordinal);

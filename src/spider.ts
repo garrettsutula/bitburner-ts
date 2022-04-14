@@ -68,7 +68,7 @@ async function spider(ns: NS) {
   }
 
   const controlledHostsArr = Array.from(controlledHosts.values());
-  const scripts = ns.ls('home', '/scheduler/scripts/');
+  const scripts = ns.ls('home', '/scripts/');
   for(const host of controlledHostsArr) {
     await ns.scp(scripts, host);
   }

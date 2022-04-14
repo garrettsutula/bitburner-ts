@@ -1,15 +1,14 @@
 import { NS } from '@ns';
-// Servers need to be prepared if below this % money
-const maxServerMoneyPct = 0.80;
-// Hosts need to be weakened if their current security is above this times the multiplier
-const minSecurityBuffer = 2;
+import { calculationParameters } from '/config';
+
+const { maxServeryMoneyPercentage, maxSecurityThreshold } = calculationParameters
 
 export function isAlreadyWeakened(ns: NS, host: string): boolean {
-  return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) + minSecurityBuffer;
+  return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) * maxSecurityThreshold;
 }
 
 export function isAlreadyGrown(ns: NS, host: string): boolean {
-  return ns.getServerMaxMoney(host) * maxServerMoneyPct <= ns.getServerMoneyAvailable(host);
+  return ns.getServerMaxMoney(host) * maxServeryMoneyPercentage <= ns.getServerMoneyAvailable(host);
 }
 
 export function percentMaxMoney(ns: NS, host: string): string {
