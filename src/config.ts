@@ -3,7 +3,7 @@ export const calculationParameters = {
   throttleRatio: 0.15,
   // Target % of money to hack from the server each procedure.
   hackPercentage: 0.20,
-  prepareGrowPercentage: 0.30,
+  prepareGrowPercentage: 1.20,
   // Execution buffer between steps
   stepBuffer: 15,
 }
