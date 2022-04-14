@@ -4,7 +4,7 @@ const lastLogMessage: Map<string, number> = new Map();
 const logIntervalMs = 1000 * 60;
 const warnIntervalMs = 1000 * 10;
 const errorIntervalMs = 1000 * 2;
-import { percentMaxMoney } from './metrics';
+import { percentMaxMoney } from '/lib/metrics';
 
 function log(ns: NS, id: string, message: string, logInterval: number, bypassLogInterval = false): void {
   const lastLogTime = lastLogMessage.has(id) ? lastLogMessage.get(id) as number : 0;

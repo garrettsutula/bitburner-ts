@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { calculateWeaken, calculateGrow, calculateStepsDuration, calculateStepsRamNeeded, calculateWeakenDelay, calculateGrowDelay } from './calculate'
+import { calculateWeaken, calculateGrow, calculateStepsDuration, calculateStepsRamNeeded, calculateWeakenDelay, calculateGrowDelay } from '/lib/stages/calculate'
 import { Procedure } from '/models/procedure';
 import { scriptPaths } from '/config';
 

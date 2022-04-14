@@ -13,8 +13,8 @@ import { isAlreadyGrown, isAlreadyWeakened} from '/lib/metrics';
 import { schedulerParameters, calculationParameters } from '/config';
 let currentAttackLimit = 1;
 
-const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs, respectAttackLimit } = schedulerParameters;
-const { prepareGrowPercentage } = calculationParameters;
+const { tickRate, queueAndExecutesPerTick, baseAttackLimit, executionBufferMs } = schedulerParameters;
+const { prepareGrowthFactor } = calculationParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -85,7 +85,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
     const procedure = getProcedure(ns, scheduledHost);
     if (lastEndingTime + executionBufferMs < Date.now() + procedure.totalDuration) {
-      if (scheduledHost.assignedProcedure === 'prepare' && scheduledHost.runningProcedures.size < Math.ceil(1/prepareGrowPercentage)) {
+      if (scheduledHost.assignedProcedure === 'prepare' && scheduledHost.runningProcedures.size < Math.ceil(1/prepareGrowthFactor)) {
         procedureQueue.push({
           host,
           procedure,

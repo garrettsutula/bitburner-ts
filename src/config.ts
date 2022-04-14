@@ -1,9 +1,7 @@
 export const calculationParameters = {
-  // Global throttling ratio, useful early game.
-  throttleRatio: 0.15,
   // Target % of money to hack from the server each procedure.
-  hackPercentage: 0.20,
-  prepareGrowPercentage: 1.20,
+  hackPercentage: 0.10,
+  prepareGrowthFactor: 1.05,
   // Execution buffer between steps
   stepBuffer: 15,
 }

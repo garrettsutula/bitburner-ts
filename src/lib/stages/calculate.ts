@@ -2,14 +2,14 @@ import { NS } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 import { calculationParameters } from '/config';
 
-const { throttleRatio, hackPercentage, stepBuffer, prepareGrowthFactor } = calculationParameters;
+const { hackPercentage, stepBuffer, prepareGrowthFactor } = calculationParameters;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number): ProcedureStep {
   const duration = ns.getWeakenTime(host);
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05 * throttleRatio));
+  const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { ordinal, script, duration, threadsNeeded, ramNeeded }
 }
@@ -28,7 +28,7 @@ export function calculateHack(ns: NS, ordinal: number, host: string, script: str
   const duration = ns.getHackTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
   // TODO: pass cores as param
-  const threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage * throttleRatio);
+  const threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage);
   const securityLevelIncrease = ns.hackAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
