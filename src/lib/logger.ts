@@ -1,14 +1,19 @@
 import { NS } from '@ns';
 import { ScheduledHost } from '/models/procedure';
+import { percentMaxMoney } from '/lib/metrics';
+
 const lastLogMessage: Map<string, number> = new Map();
 const logIntervalMs = 1000 * 60;
 const warnIntervalMs = 1000 * 10;
 const errorIntervalMs = 1000 * 2;
-import { percentMaxMoney } from '/lib/metrics';
+const knownLogIntervals: {[key: string]: any} = {
+  'outOfMemory': 1000 * 120,
+}
+
 
 function log(ns: NS, id: string, message: string, logInterval: number, bypassLogInterval = false): void {
   const lastLogTime = lastLogMessage.has(id) ? lastLogMessage.get(id) as number : 0;
-  if (bypassLogInterval || (lastLogTime + logInterval <  Date.now())) {
+  if (bypassLogInterval || (lastLogTime + (knownLogIntervals[id] ? knownLogIntervals[id] : logInterval) <  Date.now())) {
     lastLogMessage.set(id, Date.now());
     ns.tprint(message);
   }

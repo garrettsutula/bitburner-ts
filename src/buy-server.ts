@@ -1,8 +1,8 @@
 import { NS } from '@ns'
 
 export async function main(ns : NS) : Promise<void> {
-  const ram = 16384;
-  const intervalSeconds = 15 * 1000;
+  const ram = parseInt((ns.args[0] as string) || '8192');
+  const intervalSeconds = 10 * 1000;
   ns.disableLog('sleep');
   ns.disableLog('getServerMoneyAvailable');
 

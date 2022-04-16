@@ -9,6 +9,7 @@ export async function main(ns : NS) : Promise<void> {
   .map((faction, i) => ns.getAugmentationsFromFaction(faction)
     .filter((aug) => !playerAugs.includes(aug))
     .filter((aug) => ns.getAugmentationPrereq(aug).every((prereq) => playerAugs.includes(prereq)))
+    .filter((aug) => ns.getPlayer().money > ns.getAugmentationPrice(aug))
     .filter((aug) => ns.getAugmentationRepReq(aug) < factionsRep[i]));
    const augsToBuy = Array.from(new Set(factionAugs.flatMap((augs) => augs)));
    ns.tprint(`INFO: Augs to purchase: ${JSON.stringify(augsToBuy)}`);

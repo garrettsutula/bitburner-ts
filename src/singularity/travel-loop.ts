@@ -12,6 +12,6 @@ function travelbatch(ns: NS) {
 export async function main(ns : NS) : Promise<void> {
   while(true) {
     travelbatch(ns);
-    await ns.sleep(25);
+    await ns.sleep(15);
   }
 }

@@ -12,7 +12,7 @@ export function prepareSchedule(ns: NS, host: string): Procedure {
   grow.delay = calculateGrowDelay(ns, host);
   secondWeaken.delay = calculateWeakenDelay(ns, host, secondWeaken.ordinal);
 
-  const steps = [ weaken, grow, secondWeaken ];
+  const steps = [ weaken, grow, secondWeaken ].filter((step) => step.threadsNeeded > 0);
 
   return {
     type: 'prepare',
