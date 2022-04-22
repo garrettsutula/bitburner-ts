@@ -11,27 +11,39 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
   const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  return { ordinal, script, duration, threadsNeeded, ramNeeded }
+  return { ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
 }
 
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = ns.getGrowTime(host);
   const growthFactor = 1 / (1-hackPercentage);
   // TODO: pass cores as param
-  const threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowthFactor : growthFactor , 1));
+  let threadsNeeded = 0;
+  if (ns.formulas) {
+    threadsNeeded = (prepare ? prepareGrowthFactor : growthFactor) / ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer());
+  } else {
+    threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowthFactor : growthFactor , 1));
+  }
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
+  
+  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
 }
  
 export function calculateHack(ns: NS, ordinal: number, host: string, script: string): ProcedureStep {
   const duration = ns.getHackTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
   // TODO: pass cores as param
-  const threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage);
+  let threadsNeeded = 0;
+  if (ns.formulas) {
+    threadsNeeded = hackPercentage / ns.formulas.hacking.hackPercent(ns.getServer(host), ns.getPlayer());
+  } else {
+    threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage);
+  }
+  
   const securityLevelIncrease = ns.hackAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease }
+  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
 }
 
 export function calculateHackDelay(ns: NS, host: string): number {

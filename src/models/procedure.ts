@@ -7,7 +7,7 @@ export interface ProcedureStep {
   threadsNeeded: number;
   ramNeeded: number;
   securityLevelIncrease?: number;
-  delay?: number;
+  delay: number;
 }
 
 export interface Procedure {

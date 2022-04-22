@@ -53,7 +53,7 @@ function runProcedure(ns: NS, processId: string, currentProcedure: QueuedProcedu
   const {host, procedure: { steps }} = currentProcedure;
   for (const step of steps) {
     execa(ns, step.script, controlledServer.host, step.threadsNeeded, host, step.delay || 0, processId, step.ordinal);
-    newProcesses.push({ host: controlledServer.host, script: step.script, args: [ host, step.delay || 0, processId, step.ordinal ] });
+    newProcesses.push({ host: controlledServer.host, script: step.script, args: [ host, step.delay > 0 ? step.delay : 0, processId, step.ordinal ] });
   }
   return newProcesses;
 }
