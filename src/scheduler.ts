@@ -12,6 +12,8 @@ import { isAlreadyGrown, isAlreadyWeakened } from '/lib/metrics';
 import { schedulerParameters } from '/config';
 import { execa } from '/lib/exec';
 
+let controlledHostCount = 0;
+
 const { tickRate } = schedulerParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
@@ -46,7 +48,7 @@ function getProcedure(ns: NS, {host, assignedProcedure}: ScheduledHost) {
   }
 }
 
-async function runProcedure(ns: NS, processId: string, currentProcedure: QueuedProcedure, controlledServer: ControlledServers) {
+function runProcedure(ns: NS, processId: string, currentProcedure: QueuedProcedure, controlledServer: ControlledServers) {
   const newProcesses = [];
   const {host, procedure: { steps }} = currentProcedure;
   for (const step of steps) {
@@ -78,7 +80,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     }
 
 
-    if (1===1 || scheduledHostsArr.every((otherHost) => otherHost.runningProcedures.size >= scheduledHost.runningProcedures.size)) {
+    if (scheduledHostsArr.every((otherHost) => otherHost.runningProcedures.size >= scheduledHost.runningProcedures.size)) {
       const procedure = getProcedure(ns, scheduledHost);
       procedureQueue.push({
         host,
@@ -95,7 +97,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     const hostToExecute = controlledHostsWithMetadata.find((host) => currentProcedure.procedure.totalRamNeeded < host.availableRam);
     if (hostToExecute) {
           const processId = shortId();
-          const newProcesses = await runProcedure(ns, processId, currentProcedure, hostToExecute);
+          const newProcesses = runProcedure(ns, processId, currentProcedure, hostToExecute);
           currentHost.runningProcedures.set(processId, {
             processId,
             processes: newProcesses, 
@@ -115,13 +117,21 @@ export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
   
   const scheduledHosts = new Map<string, ScheduledHost>();
+  controlledHostCount = 0;
 
   while (true) {
-
-    // Sleep at the front of the loop so we can 'continue' if the queue is filled already.
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
     const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
+
+    // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
+    if (controlledHostCount > 0 && controlledHostCount < controlledHosts.length) {
+      const newHostsCount = controlledHosts.length - controlledHostCount;
+      const newHosts = controlledHosts.slice(controlledHosts.length - newHostsCount);
+      newHosts.forEach((host) => execa(ns, 'copy-scripts.js', 'home', 1, host, `${host}-setup-scripts`));
+      controlledHostCount = controlledHosts.length;
+      await ns.sleep(1000);
+    }
     
     exploitableHosts.forEach((host) => {
       setInitialSchedule(ns, host, scheduledHosts);
