@@ -20,7 +20,7 @@ export function calculateGrow(ns: NS, ordinal: number, host: string, script: str
   // TODO: pass cores as param
   let threadsNeeded = 0;
   if (ns.formulas) {
-    threadsNeeded = (prepare ? prepareGrowthFactor : growthFactor) / ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer());
+    threadsNeeded = Math.ceil((prepare ? prepareGrowthFactor : growthFactor) / ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer()));
   } else {
     threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowthFactor : growthFactor , 1));
   }
@@ -36,7 +36,7 @@ export function calculateHack(ns: NS, ordinal: number, host: string, script: str
   // TODO: pass cores as param
   let threadsNeeded = 0;
   if (ns.formulas) {
-    threadsNeeded = hackPercentage / ns.formulas.hacking.hackPercent(ns.getServer(host), ns.getPlayer());
+    threadsNeeded = Math.ceil(hackPercentage / ns.formulas.hacking.hackPercent(ns.getServer(host), ns.getPlayer()));
   } else {
     threadsNeeded = calculateHackThreads(ns, host, (maxMoney * 0.98) * hackPercentage);
   }
