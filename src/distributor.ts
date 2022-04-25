@@ -46,7 +46,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  
+  let currentHostCount = 0;
   const scheduledHosts = new Map<string, ScheduledHost>();
 
   while (true) {
@@ -57,6 +57,11 @@ export async function main(ns : NS) : Promise<void> {
       setInitialSchedule(ns, host, scheduledHosts);
     });
 
+    if (exploitableHosts.length > currentHostCount) {
+      execa(ns, 'kill-all.js', 'home', 1);
+      currentHostCount = exploitableHosts.length;
+    }
+
     await startBasicHack(ns, controlledHosts, scheduledHosts);
 
     logger.info(ns, 'schedulerReport', `
@@ -66,6 +71,6 @@ export async function main(ns : NS) : Promise<void> {
       .map((scheduledHost) => logger.scheduledHostStatus(ns, scheduledHost))
       .join('\n')}`);
 
-    await ns.sleep(tickRate);
+    await ns.sleep(10 * tickRate * Math.random());
   }
 }
