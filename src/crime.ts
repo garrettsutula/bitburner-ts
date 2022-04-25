@@ -21,6 +21,8 @@ function getCrime(param: string): string {
     case 'hom':
     case 'homicide':
       return 'homicide';
+    case 'l':
+      return 'larceny';
     case 'm':
     default:
       return 'mug';
@@ -35,9 +37,7 @@ function getCrime(param: string): string {
 }
 
 async function doCrime(ns: NS, crime: string): Promise<void> {
-  ns.tail();
-  
-  ns.commitCrime('bond forgery');
+  ns.commitCrime(crime);
   while(ns.isBusy()) {
     await ns.sleep(50);
   }
@@ -46,5 +46,8 @@ async function doCrime(ns: NS, crime: string): Promise<void> {
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
   const [crimeParam] = ns.args[0] as string;
-  await doCrime(ns, getCrime(crimeParam));
+  ns.tail();
+  while (true) {
+    await doCrime(ns, getCrime(crimeParam));
+  }
 }
