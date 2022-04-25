@@ -288,11 +288,13 @@ function newProduct(ns: NS, division: Division) {
 	}
 
 	if (developedProducts.length >= numProducts) {
+		const firstProduct = division.products[0]
 		// discontinue the oldest product if over max amount of products
-		ns.print(division.name + " Discontinue product " + division.products[0]);
-		ns.corporation.discontinueProduct(division.name, division.products[0]);
+		ns.print(division.name + " Discontinue product " + firstProduct);
+		ns.corporation.discontinueProduct(division.name, firstProduct);
 		allProductNumbers.shift();
 		developedProducts.shift();
+		division.products = division.products.filter((product) => product !== firstProduct);
 	}
 
 	// get the product number of the latest product and increase it by 1 for the mext product. Product names must be unique. 
