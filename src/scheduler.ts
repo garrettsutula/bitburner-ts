@@ -104,21 +104,8 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
             timeStarted: Date.now(),
             procedure: currentProcedure.procedure,
           });
-    }
-    const minRamNeeded = currentProcedure.procedure.steps.reduce((acc, step) => ns.getScriptRam(step.script) + acc, 0);
-    const minimalRamHost = controlledHostsWithMetadata.find((host) => minRamNeeded < host.availableRam);
-    if (minimalRamHost) {
-      currentProcedure.procedure.steps.forEach((step) => step.threadsNeeded = 1);
-      const processId = shortId();
-      const newProcesses = runProcedure(ns, processId, currentProcedure, minimalRamHost);
-      currentHost.runningProcedures.set(processId, {
-        processId,
-        processes: newProcesses, 
-        timeStarted: Date.now(),
-        procedure: currentProcedure.procedure,
-      });
     } else {
-      logger.warn(ns, 'outOfMemory', `Out of Memory: was attempting to schedule ${procedureQueue[0].procedure.type}@${procedureQueue[0].host}, needed ${procedureQueue[0].procedure.totalRamNeeded.toFixed(0)}GB RAM. ${procedureQueue.length} remain in queue.`);
+      logger.warn(ns, 'outOfMemory', `Out of Memory: was attempting to schedule ${currentProcedure.procedure.type}@${currentProcedure.host}, needed ${currentProcedure.procedure.totalRamNeeded.toFixed(0)}GB RAM. ${procedureQueue.length} remain in queue.`);
       break;
     }
   }
@@ -127,6 +114,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
+  ns.tail();
   
   const scheduledHosts = new Map<string, ScheduledHost>();
   controlledHostCount = 0;
