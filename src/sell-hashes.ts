@@ -11,6 +11,8 @@ function getHashItem(arg: string) {
       return 'Sell for Corporation Funds';
     case 'research':
       return 'Exchange for Corporation Research';
+    case 'gym':
+      return 'Improve Gym Training';
   }
 }
 
