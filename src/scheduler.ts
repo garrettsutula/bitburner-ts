@@ -14,7 +14,7 @@ import { execa } from '/lib/exec';
 
 let controlledHostCount = 0;
 
-const { tickRate } = schedulerParameters;
+const { tickRate, executionBufferMs } = schedulerParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -60,7 +60,7 @@ function runProcedure(ns: NS, processId: string, currentProcedure: QueuedProcedu
 
 async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], scheduledHosts: Map<string, ScheduledHost>) {
   const procedureQueue: QueuedProcedure[] = [];
-  const scheduledHostsArr = Array.from(scheduledHosts.values());
+  const scheduledHostsArr = Array.from(scheduledHosts.values()).reverse();
 
   for (const scheduledHost of scheduledHostsArr) {
     const host = scheduledHost.host;
@@ -71,7 +71,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     })
     
     // Switch assigned procedure if needed.
-    const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host) && scheduledHost.assignedProcedure === 'prepare';
+    const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
     if (readyToExploit) {
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
@@ -80,8 +80,9 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     }
 
 
-    if (scheduledHostsArr.every((otherHost) => otherHost.runningProcedures.size >= scheduledHost.runningProcedures.size)) {
-      const procedure = getProcedure(ns, scheduledHost);
+    const procedure = getProcedure(ns, scheduledHost);
+    // Math.floor(procedure.totalDuration / executionBufferMs)
+    if (Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.size /* && scheduledHostsArr.every((host) => host.runningProcedures.size >= scheduledHost.runningProcedures.size) */) {
       procedureQueue.push({
         host,
         procedure,

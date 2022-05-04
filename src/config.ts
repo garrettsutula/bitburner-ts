@@ -1,19 +1,19 @@
 export const calculationParameters = {
   // Target % of money to hack from the server each procedure.
-  hackPercentage: 0.90,
+  hackPercentage: 0.25,
   // % of money to grow each round of prepare
-  prepareGrowthFactor: 1.50,
+  prepareGrowthFactor: 1.5,
   // % of money where we switch from 'prepare' to 'hack'
   maxServeryMoneyPercentage: 0.95,
   // % over minimum security allowed
-  maxSecurityThreshold: 1.20,
+  maxSecurityThreshold: 1.25,
   // Execution buffer between steps
-  stepBuffer: 15,
+  stepBuffer: 20,
 }
 
 export const schedulerParameters = {
   // Timer for ns.sleep in main loop.
-  tickRate: 25, 
+  tickRate: 10, 
   // Number of times we run queueAndExecuteProcedures before going back to sleep.
   // If we run out of ram, we break out of this loop early.
   queueAndExecutesPerTick: 50,
@@ -21,10 +21,10 @@ export const schedulerParameters = {
   // When a server is done being prepared, we increase this by one to move on to the next host.
   baseAttackLimit: 1,
   // Buffer ensure procedure execution doesn't overlap.
-  executionBufferMs: 100,
+  executionBufferMs: 150,
   // When set to false, immediately target all hosts we can
   respectAttackLimit: false,
-  reserveHomeRamGb: 64,
+  reserveHomeRamGb: 16,
 }
 
 export const scriptPaths = {

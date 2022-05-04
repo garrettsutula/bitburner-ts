@@ -29,7 +29,10 @@ export async function main(ns: NS): Promise<void> {
 			}
 		}
 		if (corp.divisions.length < 2 && corp.numShares == corp.totalShares) {
-			if (corp.divisions[0].products.length > 2 && corp.divisions[0].products.every((product) => ns.corporation.getProduct(corp.divisions[0].name, product).developmentProgress === 100)) {
+			if (corp.divisions[0].products.length > 2 && corp.divisions[0].products.every((product) => {
+				const productInfo = ns.corporation.getProduct(corp.divisions[0].name, product);
+				return productInfo.developmentProgress >= 100
+			})) {
 				await trickInvest(ns, corp.divisions[0]);
 			}
 		}

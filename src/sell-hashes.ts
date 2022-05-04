@@ -13,6 +13,9 @@ function getHashItem(arg: string) {
       return 'Exchange for Corporation Research';
     case 'gym':
       return 'Improve Gym Training';
+    case 'university':
+    case "uni":
+      return "Improve Studying";
   }
 }
 

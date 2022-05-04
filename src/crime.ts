@@ -45,7 +45,7 @@ async function doCrime(ns: NS, crime: string): Promise<void> {
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  const [crimeParam] = ns.args[0] as string;
+  const crimeParam = ns.args[0] as string;
   ns.tail();
   while (true) {
     await doCrime(ns, getCrime(crimeParam));
