@@ -54,8 +54,8 @@ export function calculateGrowDelay(ns: NS, host: string): number {
   return ns.getWeakenTime(host) - ns.getGrowTime(host) + stepBuffer;
 }
 
-export function calculateWeakenDelay(ns: NS, host: string, stepNumber: number): number {
-  return stepBuffer * (stepNumber - 2);
+export function calculateWeakenDelay(ns: NS, host: string, bufferMultiplier: number): number {
+  return stepBuffer * bufferMultiplier;
 }
 
 export function calculateStepsRamNeeded(steps: ProcedureStep[]): number {

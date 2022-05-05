@@ -48,8 +48,8 @@ export interface ScriptEndLog {
 }
 
 export interface JobResult {
-  hackDiffulty: number;
-  minDifficulty: number;
+  hackDiffulty?: number;
+  minDifficulty?: number;
 }
 
 export interface Procedure {

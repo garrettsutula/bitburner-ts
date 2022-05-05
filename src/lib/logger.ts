@@ -32,7 +32,7 @@ function error(ns: NS, id: string, message: string, bypassLogInterval?: boolean)
 }
 
 function scheduledHostStatus(ns: NS, scheduledHost: ScheduledHost): string {
-  let logLine =  `\t* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.size} running - ${scheduledHost.host}`;
+  let logLine =  `\t* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.length} running - ${scheduledHost.host}`;
   logLine += `${scheduledHost.assignedProcedure === 'prepare' ? `${percentMaxMoney(ns, scheduledHost.host)}% max money`: ''}`;
   return logLine;
 }

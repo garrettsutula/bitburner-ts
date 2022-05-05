@@ -17,11 +17,10 @@ async function startBasicHack (ns: NS, controlledHosts: string[], scheduledHosts
   for (const host of scheduledHostsArr) {
     const controlledHostsWithMetadata = getControlledHostsWithMetadata(ns, controlledHosts);
     const hostToExecute = controlledHostsWithMetadata.find((host) => basicHackSize < host.availableRam);
-    if (hostToExecute && scheduledHostsArr.every((scheduledHost) => scheduledHost.runningProcedures.size >= host.runningProcedures.size)) {
+    if (hostToExecute && scheduledHostsArr.every((scheduledHost) => scheduledHost.runningProcedures.length >= host.runningProcedures.length)) {
           const processId = shortId();
           execa(ns, scriptPaths.basicHack, hostToExecute.host, 1, host.host, processId);
-          host.runningProcedures.set(processId, {
-            processId,
+          host.runningProcedures.push({
             processes: [{host: hostToExecute.host, script: scriptPaths.basicHack, args: [host.host, processId]}], 
             startTime: Date.now(),
             procedure: {type: 'exploit', steps: [], totalDuration: 0, totalRamNeeded: basicHackSize}
@@ -38,7 +37,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
     scheduledHosts.set(host, {
       host,
       assignedProcedure: 'exploit',
-      runningProcedures: new Map(),
+      runningProcedures: [],
       queued: false,
     })
     return 'exploit';

@@ -7,11 +7,12 @@ export async function main(ns : NS) : Promise<void> {
   const processId = ns.args[2] as string;
   const batchId = ns.args[2] as string;
   const monitorEnabled = ns.args[4] === 'monitor';
+  await ns.sleep(delay);
   if (monitorEnabled) await writePortJson(ns, 2, {
+    batchId,
     processId,
     startTimeActual: Date.now(),
   });
-  await ns.sleep(delay);
   await ns.hack(target);
   if (monitorEnabled) await writePortJson(ns, 3, {
     batchId,

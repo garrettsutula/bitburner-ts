@@ -56,8 +56,7 @@ const HEIGHT_PIXELS = 600;
  * @param {number} [now] - current time (optional)
  * @returns {SVGSVGElement}
  */
-export function renderBatches(el: Element | null, batches: any[][] = [], now: number): Element {
-  const doc = eval("document");
+export function renderBatches(el: SVGElement | null, batches: any[][] = [], now: number): Element {
   now ||= Date.now();
 
   // Render the main SVG element if needed
@@ -105,7 +104,7 @@ export function renderBatches(el: Element | null, batches: any[][] = [], now: nu
   });
 
   // Update the time coordinates every frame
-  const dataEl = doc.getElementById("timeCoordinates");
+  const dataEl = (el as any).getElementById("timeCoordinates");
   dataEl.setAttribute('transform',
     `scale(${WIDTH_PIXELS / WIDTH_SECONDS} 1) translate(${convertTime(startTime-now, 0)} 0)`
   );
@@ -190,7 +189,7 @@ function renderJobLayer(batches: Array < any[] >= [], now: number) {
       }
       // draw the job bars
       let color = GRAPH_COLORS[(job.task as Task)];
-      if (job.cancelled) {
+      if (job.cancelled === true) {
         color = GRAPH_COLORS.cancelled;
       }
       jobLayer.appendChild(svgEl({
@@ -304,10 +303,10 @@ function svgEl({
   attributes = {},
   children = [],
   content
-}: ElementDeclaration) {
+}: ElementDeclaration): SVGElement {
   const doc = eval("document");
   const xmlns = 'http://www.w3.org/2000/svg';
-  const el = doc.createElementNS(xmlns, tagName) as Element;
+  const el = doc.createElementNS(xmlns, tagName) as SVGElement;
   // support exporting outerHTML
   if (tagName.toLowerCase() == 'svg') {
     attributes['xmlns'] = xmlns;
@@ -320,15 +319,12 @@ function svgEl({
   // append all children
   for (const child of children) {
     // recursively construct child elements
-    if (Array.isArray(child)) {
-      childElement = svgEl(child);
-      el.appendChild(childElement);
-    }
-    if (content) {
-      childElement = doc.createTextNode(child);
-      el.appendChild(childElement);
-    }
-
+    childElement = svgEl(child);
+    el.appendChild(childElement);
+  }
+  if (content) {
+    childElement = doc.createTextNode(content);
+    el.appendChild(childElement);
   }
   return el;
 }

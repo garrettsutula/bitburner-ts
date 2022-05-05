@@ -8,20 +8,17 @@ export const calculationParameters = {
   // % over minimum security allowed
   maxSecurityThreshold: 1.25,
   // Execution buffer between steps
-  stepBuffer: 100,
+  stepBuffer: 50,
 }
 
 export const schedulerParameters = {
   // Timer for ns.sleep in main loop.
-  tickRate: 10, 
-  // Number of times we run queueAndExecuteProcedures before going back to sleep.
-  // If we run out of ram, we break out of this loop early.
-  queueAndExecutesPerTick: 50,
+  tickRate: 5, 
   // Number of targets to start hacking when the script starts running.
   // When a server is done being prepared, we increase this by one to move on to the next host.
   baseAttackLimit: 1,
   // Buffer ensure procedure execution doesn't overlap.
-  executionBufferMs: 300,
+  executionBufferMs: 150,
   // When set to false, immediately target all hosts we can
   respectAttackLimit: false,
   reserveHomeRamGb: 16,

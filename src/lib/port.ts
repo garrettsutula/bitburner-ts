@@ -27,7 +27,7 @@ export function readPortJson(ns: NS, port: number): GenericObject | string[] {
   try {
     return JSON.parse(fileStr, reviver);
   } catch (e) {
-    throw new Error(`JSON Parse Error: ${JSON.stringify(e)}`);
+    return {};
   }
 }
 

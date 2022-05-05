@@ -61,10 +61,10 @@ async function runProcedure(ns: NS, currentProcedure: QueuedProcedure, controlle
       processId,
       task: step.task,
       duration: step.duration,
-      startTime: Date.now(),
-      endTime: Date.now() + step.duration,
+      startTime: Date.now() + step.delay,
+      endTime: Date.now() + step.duration + step.delay,
     });
-    execa(ns, step.script, controlledServer.host, step.threadsNeeded, host, step.delay || 0, processId, batchId, 'monitor');
+    execa(ns, step.script, controlledServer.host, step.threadsNeeded, host, step.delay || 0, processId, batchId, host === monitoredHost ? 'monitor' : false);
     newProcesses.push({ host: controlledServer.host, script: step.script, args: [ host, step.delay > 0 ? step.delay : 0, processId, step.ordinal ] });
   }
   return newProcesses;
@@ -123,9 +123,10 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
 export async function main(ns : NS) : Promise<void> {
   disableLogs(ns);
-  ns.tail();
   
   const scheduledHosts = new Map<string, ScheduledHost>();
+  monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
+  if (monitoredHost) execa(ns, 'batchMonitor.js', 'home', 1);
   controlledHostCount = 0;
 
   while (true) {
