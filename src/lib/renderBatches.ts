@@ -56,7 +56,7 @@ const HEIGHT_PIXELS = 600;
  * @param {number} [now] - current time (optional)
  * @returns {SVGSVGElement}
  */
-export function renderBatches(el: SVGElement | null, batches: any[][] = [], now: number): Element {
+export function renderBatches(el: SVGElement | null, batches: any[][] = [], now: number): SVGElement {
   now ||= Date.now();
 
   // Render the main SVG element if needed

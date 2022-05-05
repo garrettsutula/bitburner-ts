@@ -63,13 +63,14 @@ export async function main(ns : NS) : Promise<void> {
   clearPort(ns, 1); // New scheduler events
   clearPort(ns, 2); // Script Start events
   clearPort(ns, 3); // Script End Events
+  let element: any = null;
   while (true) {
     await processSchedulerEvents(ns, batches);
     await processScriptStartEvents(ns, batches);
     await processScriptEndEvents(ns, batches);
     const batchesArr = Array.from(batches.values()).map((jobs) => Array.from(jobs.values()));
-    const rendered = renderBatches(null, batchesArr, Date.now());
-    logHTML(ns, rendered);
+    element = renderBatches(element, batchesArr, Date.now());
+    logHTML(ns, element);
     await ns.sleep(50);
   }
 }
