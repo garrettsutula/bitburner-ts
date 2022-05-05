@@ -11,7 +11,7 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
   const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  return { ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
+  return { task: 'weaken', ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
 }
 
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
@@ -27,7 +27,7 @@ export function calculateGrow(ns: NS, ordinal: number, host: string, script: str
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   
-  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
+  return { task: 'grow', ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
 }
  
 export function calculateHack(ns: NS, ordinal: number, host: string, script: string): ProcedureStep {
@@ -43,7 +43,7 @@ export function calculateHack(ns: NS, ordinal: number, host: string, script: str
   
   const securityLevelIncrease = ns.hackAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
-  return { ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
+  return { task: 'hack', ordinal, script, duration, threadsNeeded, ramNeeded, securityLevelIncrease, delay: 0 }
 }
 
 export function calculateHackDelay(ns: NS, host: string): number {

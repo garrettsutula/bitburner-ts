@@ -23,8 +23,8 @@ async function startBasicHack (ns: NS, controlledHosts: string[], scheduledHosts
           host.runningProcedures.set(processId, {
             processId,
             processes: [{host: hostToExecute.host, script: scriptPaths.basicHack, args: [host.host, processId]}], 
-            timeStarted: Date.now(),
-            procedure: {type: 'exploit', steps: [], totalDuration: 0, totalRamNeeded: basicHackSize},
+            startTime: Date.now(),
+            procedure: {type: 'exploit', steps: [], totalDuration: 0, totalRamNeeded: basicHackSize}
           });
     } else {
       break;

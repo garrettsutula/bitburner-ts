@@ -1,3 +1,5 @@
+import { Job, Task } from '/models/procedure';
+
 const startTime = Date.now();
 /** Convert timestamps to seconds since the graph was started. This resolution works for about 24 hours. */
 
@@ -8,20 +10,6 @@ interface ElementDeclaration {
     },
     children ? : ElementDeclaration[];
   content ? : string;
-}
-
-interface Job {
-  task: "hack" | "grow" | "weaken" | "cancelled" | "desync" | "safe" | "unsafe";
-  duration: number;
-  startTime: number;
-  startTimeActual ? : number;
-  endTime: number;
-  endTimeActual ? : number;
-  cancelled: boolean;
-  result: {
-    hackDifficulty: number;
-    minDifficulty: number;
-  }
 }
 
 function convertTime(t: number, t0 = startTime) {
@@ -68,7 +56,7 @@ const HEIGHT_PIXELS = 600;
  * @param {number} [now] - current time (optional)
  * @returns {SVGSVGElement}
  */
-export function renderBatches(el: Element, batches = [], now: number): Element {
+export function renderBatches(el: Element | null, batches: any[][] = [], now: number): Element {
   const doc = eval("document");
   now ||= Date.now();
 
@@ -139,7 +127,7 @@ export function renderBatches(el: Element, batches = [], now: number): Element {
   return el;
 }
 
-function renderSecurityLayer(batches: Array < Job[] > = [], now: number) {
+function renderSecurityLayer(batches: Array < any[] > = [], now: number) {
   const secLayer = svgEl({
     tagName: 'g',
     attributes: {
@@ -185,7 +173,7 @@ function renderSecurityLayer(batches: Array < Job[] > = [], now: number) {
   return secLayer;
 }
 
-function renderJobLayer(batches: Array < Job[] >= [], now: number) {
+function renderJobLayer(batches: Array < any[] >= [], now: number) {
   const jobLayer = svgEl({
     tagName: 'g',
     attributes: {
@@ -201,7 +189,7 @@ function renderJobLayer(batches: Array < Job[] >= [], now: number) {
         continue;
       }
       // draw the job bars
-      let color = GRAPH_COLORS[job.task];
+      let color = GRAPH_COLORS[(job.task as Task)];
       if (job.cancelled) {
         color = GRAPH_COLORS.cancelled;
       }
