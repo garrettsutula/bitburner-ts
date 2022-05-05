@@ -6,5 +6,4 @@ export async function main(ns : NS) : Promise<void> {
   await ns.sleep(delay);
   const amount = await ns.hack(target);
   //ns.tprinat(`  #${step}|${processId} - ${target} - h(${amount.toFixed(2)})\n`);
-  if (amount === 0) ns.tprint(`ERROR: ZERO $ HACKED FOR ${target}, current balance: ${ns.getServerMoneyAvailable(target)}`);
 }
