@@ -25,5 +25,5 @@ export async function main(ns : NS) : Promise<void> {
   const path = foundPaths[0].split('|');
   path.forEach((hop: string) => ns.connect(hop))
   await ns.installBackdoor();
-  ns.connect('home');
+
 }
