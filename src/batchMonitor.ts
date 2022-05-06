@@ -8,23 +8,20 @@ const jobStartPort = 1;
 const scriptStartPort = 2;
 const scriptEndPort = 3;
 
-type BatchMap = Map<string, Map<string, Job>>;
+type BatchMap = Job[][];
 
 async function processSchedulerEvents(ns: NS, batches: BatchMap) {
   while (ns.peek(jobStartPort) !== emptyPort) {
     const event = readPortJson(ns, jobStartPort) as JobStartLog;
     if (Object.keys(event).length) {
-      let jobMap: Map<string, Job>;
-      if (!batches.has(event.batchId)) {
-         jobMap = new Map<string, Job>();
+      const newJob: Job = { batchId: event.batchId, processId: event.processId, task: event.task, duration: event.duration, startTime: event.startTime, endTime: event.endTime, cancelled: false, result: {} };
+      const batch = batches.find((batch) => batch.some((job) => job.batchId === event.batchId));
+      if (batch) {
+         batch.push(newJob);
+      } else {
+        batches.push([newJob]);
       }
-      else {
-        jobMap = batches.get(event.batchId) as Map<string, Job>;
-      } 
-      jobMap.set(event.processId, { processId: event.processId, task: event.task, duration: event.duration, startTime: event.startTime, endTime: event.endTime, cancelled: false, result: {} })
-      batches.set(event.batchId, jobMap);
     }
-
   }
 }
 
@@ -32,11 +29,9 @@ async function processScriptStartEvents(ns: NS, batches: BatchMap) {
   while (ns.peek(scriptStartPort) !== emptyPort) {
     const event = readPortJson(ns, scriptStartPort) as ScriptStartLog;
     if (Object.keys(event).length) {
-    const jobMap = batches.get(event.batchId);
-    if (jobMap?.has(event.processId)) {
-      const job = jobMap?.get(event.processId) as Job;
-      job.startTimeActual = event.startTimeActual;
-      jobMap?.set(event.processId, job);
+    const runningJob = batches.find((batch) => batch.some((job) => job.batchId === event.batchId))?.find((job) => job.processId === event.processId);
+    if (runningJob) {
+      runningJob.startTimeActual = event.startTimeActual;
     }
   }
 }
@@ -46,12 +41,10 @@ async function processScriptEndEvents(ns: NS, batches: BatchMap) {
   while (ns.peek(scriptEndPort) !== emptyPort) {
     const event = readPortJson(ns, scriptEndPort) as ScriptEndLog;
     if (Object.keys(event).length) {
-    const jobMap = batches.get(event.batchId);
-    if (jobMap?.has(event.processId)) {
-      const job = jobMap?.get(event.processId) as Job;
-      job.endTimeActual = event.endTimeActual;
-      job.result = event.result;
-      jobMap?.set(event.processId, job);
+    const runningJob = batches.find((batch) => batch.some((job) => job.batchId === event.batchId))?.find((job) => job.processId === event.processId);
+    if (runningJob) {
+      runningJob.endTimeActual = event.endTimeActual;
+      runningJob.result = event.result;
     }
   }
 }
@@ -59,7 +52,7 @@ async function processScriptEndEvents(ns: NS, batches: BatchMap) {
 
 export async function main(ns : NS) : Promise<void> {
   ns.disableLog('ALL');
-  const batches: BatchMap = new Map();
+  const batches: BatchMap = [];
   clearPort(ns, 1); // New scheduler events
   clearPort(ns, 2); // Script Start events
   clearPort(ns, 3); // Script End Events

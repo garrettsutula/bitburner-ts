@@ -17,12 +17,12 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = ns.getGrowTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
-  const growthFactor = prepare ? prepareGrowthFactor : maxMoney / (maxMoney * (1 - hackPercentage));
+  const growthFactor = prepare ? prepareGrowthFactor : (maxMoney * 1.05) / ((maxMoney * (1 - hackPercentage)));
   // TODO: pass cores as param
   let threadsNeeded = 0;
   if (ns.formulas) {
     const growthOneThread = ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer());
-    threadsNeeded = Math.ceil((growthFactor) / (1-growthOneThread));
+    threadsNeeded = Math.ceil((growthFactor) / (growthOneThread));
   } else {
     threadsNeeded = Math.ceil(ns.growthAnalyze(host, growthFactor , 1));
   }

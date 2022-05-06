@@ -25,10 +25,7 @@ async function startBasicHack (ns: NS, controlledHosts: string[], scheduledHosts
             startTime: Date.now(),
             procedure: {type: 'exploit', steps: [], totalDuration: 0, totalRamNeeded: basicHackSize}
           });
-    } else {
-      break;
     }
-
   }
 }
 

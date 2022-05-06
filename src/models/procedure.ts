@@ -14,6 +14,7 @@ export interface ProcedureStep {
 }
 
 export interface Job {
+  batchId: string;
   processId: string;
   task: Task;
   duration: number;
