@@ -92,7 +92,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     // Math.floor(procedure.totalDuration / executionBufferMs)
     if (
       Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length && // We can fit more procedures in the time it takes it execute one divided by the execution buffer.
-      scheduledHostsArr.every((host) => host.runningProcedures.length >= scheduledHost.runningProcedures.length || (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length )) {
+      scheduledHostsArr.every((host) => host.runningProcedures.length >= scheduledHost.runningProcedures.length || (host.runningProcedures.length && (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length ))) {
       procedureQueue.push({
         host,
         procedure,
