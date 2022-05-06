@@ -68,12 +68,10 @@ async function spider(ns: NS) {
   }
 
   const controlledHostsArr = Array.from(controlledHosts.values());
-  const scripts = ns.ls('home', '/scripts/');
+  const scripts = ns.ls('home', '/scripts/').concat(...ns.ls('home', '/lib/'));
   for(const host of controlledHostsArr) {
     await ns.scp(scripts, host);
   }
-
-  const pid = ns.run('/spider/backdoor.js')
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));

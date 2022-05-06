@@ -1,17 +1,17 @@
 import { NS } from '@ns';
-import { readJson } from '/lib/file';
-import { disableLogs } from '/lib/logger';
-import { shortId } from '/lib/uuid';
-import { QueuedProcedure, ScheduledHost } from '/models/procedure';
-import { ControlledServers } from '/models/server';
-import { exploitSchedule } from '/lib/stages/exploit';
-import { prepareSchedule } from '/lib/stages/prepare';
-import { logger } from '/lib/logger';
-import { getControlledHostsWithMetadata } from '/lib/hosts';
-import { isAlreadyGrown, isAlreadyWeakened } from '/lib/metrics';
-import { schedulerParameters } from '/config';
-import { execa } from '/lib/exec';
-import { writePortJson } from '/lib/port';
+import { readJson } from 'lib/file';
+import { disableLogs } from 'lib/logger';
+import { shortId } from 'lib/uuid';
+import { QueuedProcedure, ScheduledHost } from 'models/procedure';
+import { ControlledServers } from 'models/server';
+import { exploitSchedule } from 'lib/stages/exploit';
+import { prepareSchedule } from 'lib/stages/prepare';
+import { logger } from 'lib/logger';
+import { getControlledHostsWithMetadata } from 'lib/hosts';
+import { isAlreadyGrown, isAlreadyWeakened } from 'lib/metrics';
+import { schedulerParameters } from 'config';
+import { execa } from 'lib/exec';
+import { writePortJson } from 'lib/port';
 
 let controlledHostCount = 0;
 let monitoredHost: string | undefined = undefined;
@@ -82,10 +82,11 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     
     // Switch assigned procedure if needed.
     const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
-    if (readyToExploit) {
+    if (readyToExploit && scheduledHost.assignedProcedure === 'prepare') {
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
-    } else {
+    } else if (scheduledHost.assignedProcedure === 'exploit') {
+      ns.print(`WARN: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'prepare';
     }
 
@@ -132,8 +133,8 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
-    monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,1);
+    monitoredHost = /*(readJson(ns, '/data/monitoredHost.txt') as string[])[0];*/ exploitableHosts[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
     if (controlledHostCount > 0 && controlledHostCount < controlledHosts.length) {

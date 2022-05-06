@@ -1,14 +1,18 @@
 import { NS } from '@ns';
-import { calculationParameters } from '/config';
+import { calculationParameters } from 'config';
 
 const { maxServeryMoneyPercentage, maxSecurityThreshold } = calculationParameters
 
 export function isAlreadyWeakened(ns: NS, host: string): boolean {
-  return ns.getServerSecurityLevel(host) < ns.getServerMinSecurityLevel(host) * maxSecurityThreshold;
+  const currentSecurityLevel = ns.getServerSecurityLevel(host);
+  const minSecurityLevel = ns.getServerMinSecurityLevel(host)
+  return currentSecurityLevel < minSecurityLevel * maxSecurityThreshold;
 }
 
 export function isAlreadyGrown(ns: NS, host: string): boolean {
-  return ns.getServerMaxMoney(host) * maxServeryMoneyPercentage <= ns.getServerMoneyAvailable(host);
+  const maxMoney = ns.getServerMaxMoney(host);
+  const moneyAvailable = ns.getServerMoneyAvailable(host);
+  return maxMoney * maxServeryMoneyPercentage <= moneyAvailable;
 }
 
 export function percentMaxMoney(ns: NS, host: string): string {

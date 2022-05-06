@@ -9,20 +9,22 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = Math.ceil((securityLevel * 1.10) / (0.05));
+  const threadsNeeded = Math.ceil((securityLevel * 1.05) / (0.05));
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { task: 'weaken', ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
 }
 
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = ns.getGrowTime(host);
-  const growthFactor = 1 / (1-hackPercentage);
+  const maxMoney = ns.getServerMaxMoney(host);
+  const growthFactor = prepare ? prepareGrowthFactor : maxMoney / (maxMoney * (1 - hackPercentage));
   // TODO: pass cores as param
   let threadsNeeded = 0;
   if (ns.formulas) {
-    threadsNeeded = Math.ceil((prepare ? prepareGrowthFactor : growthFactor) / ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer()));
+    const growthOneThread = ns.formulas.hacking.growPercent(ns.getServer(host), 1, ns.getPlayer());
+    threadsNeeded = Math.ceil((growthFactor) / (1-growthOneThread));
   } else {
-    threadsNeeded = Math.ceil(ns.growthAnalyze(host, prepare ? prepareGrowthFactor : growthFactor , 1));
+    threadsNeeded = Math.ceil(ns.growthAnalyze(host, growthFactor , 1));
   }
   const securityLevelIncrease = ns.growthAnalyzeSecurity(threadsNeeded);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
