@@ -32,7 +32,7 @@ const GRAPH_COLORS = {
 
 const WIDTH_PIXELS = 800;
 const WIDTH_SECONDS = 16;
-const HEIGHT_PIXELS = 600;
+const HEIGHT_PIXELS = 1200;
 
 /**
  * Job
