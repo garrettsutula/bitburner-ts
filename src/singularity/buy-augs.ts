@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 
 export async function main(ns : NS) : Promise<void> {
-  const { factions } = ns.getPlayer();
+  const factions = ns.getPlayer().factions.filter((faction) => faction !== 'Shadows of Anarchy');
   const playerAugs = ns.getOwnedAugmentations();
   // Get augmentations from all factions, filter out ones we already own and out the ones we need prereqs for still.
   const factionsRep = factions.map((faction) => ns.getFactionRep(faction));
