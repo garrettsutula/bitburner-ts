@@ -1,8 +1,8 @@
-import { NS } from '@ns'
+import { NS } from '@ns';
 const foundPaths: string[] = [];
 
 function recursiveScan(ns: NS, host: string, targetHost: string, networkSignature: string, seen: string[] = []): any {
-  networkSignature += `${networkSignature.length ? '.' : ''}${host}`;
+  networkSignature += `${networkSignature.length ? '|' : ''}${host}`;
   if (host === targetHost) {
     foundPaths.push(networkSignature);
   }
@@ -11,14 +11,19 @@ function recursiveScan(ns: NS, host: string, targetHost: string, networkSignatur
     return ns.scan(host)
       .map((childHost: string) => recursiveScan(ns, childHost, targetHost, networkSignature, seen));
   }
-  return null
+  return null;
 }
 
 export async function main(ns : NS) : Promise<void> {
   foundPaths.length = 0;
   const targetHost = ns.args[0].toString();
   recursiveScan(ns, 'home', targetHost, '');
-  ns.tprint(`Found paths to host:
-  ${foundPaths.join('\n')}
-  `);
+  if (foundPaths.length === 0) {
+    ns.tprint(`No known path to: ${targetHost}`);
+    return;
+  }
+  const path = foundPaths[0].split('|');
+  path.forEach((hop: string) => ns.connect(hop))
+  await ns.installBackdoor();
+  ns.connect('home');
 }
