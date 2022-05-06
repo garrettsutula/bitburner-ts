@@ -85,15 +85,14 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     if (readyToExploit && scheduledHost.assignedProcedure === 'prepare') {
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
-    } else if (scheduledHost.assignedProcedure === 'exploit') {
-      ns.print(`WARN: ${host} switching from PREPARE to EXPLOIT!`);
-      scheduledHost.assignedProcedure = 'prepare';
     }
 
 
     const procedure = getProcedure(ns, scheduledHost);
     // Math.floor(procedure.totalDuration / executionBufferMs)
-    if (Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length /*&& scheduledHostsArr.every((host) => host.runningProcedures.size >= scheduledHost.runningProcedures.size)*/) {
+    if (
+      Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length && // We can fit more procedures in the time it takes it execute one divided by the execution buffer.
+      scheduledHostsArr.every((host) => host.runningProcedures.length >= scheduledHost.runningProcedures.length || (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length )) {
       procedureQueue.push({
         host,
         procedure,
@@ -133,8 +132,8 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse().slice(0,1);
-    monitoredHost = /*(readJson(ns, '/data/monitoredHost.txt') as string[])[0];*/ exploitableHosts[0];
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse();
+    monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
     if (controlledHostCount > 0 && controlledHostCount < controlledHosts.length) {
@@ -152,9 +151,9 @@ export async function main(ns : NS) : Promise<void> {
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
 
     logger.info(ns, 'schedulerReport', `
-    Scheduler Report ${new Date().toLocaleTimeString()}:
-    -----------------
-    ${Array.from(scheduledHosts.values())
+Scheduler Report ${new Date().toLocaleTimeString()}:
+-----------------
+${Array.from(scheduledHosts.values())
       .map((scheduledHost) => logger.scheduledHostStatus(ns, scheduledHost))
       .join('\n')}`);
   }
