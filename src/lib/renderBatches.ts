@@ -284,9 +284,9 @@ function renderLegend(): ElementDeclaration {
             attributes: {
               x: 42.5,
               y: 30
-            }
+            },
+            content: label,
           }],
-          content: label,
         }
       ]
     });
