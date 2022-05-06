@@ -32,8 +32,11 @@ function error(ns: NS, id: string, message: string, bypassLogInterval?: boolean)
 }
 
 function scheduledHostStatus(ns: NS, scheduledHost: ScheduledHost): string {
-  let logLine =  `\t* ${scheduledHost.assignedProcedure} - ${scheduledHost.runningProcedures.length} running - ${scheduledHost.host}`;
-  logLine += `${scheduledHost.assignedProcedure === 'prepare' ? `${percentMaxMoney(ns, scheduledHost.host)}% max money`: ''}`;
+  const minSecurity = ns.getServerSecurityLevel(scheduledHost.host);
+  const currentSecurity = ns.getServerSecurityLevel(scheduledHost.host);
+  const overMinSecPct = (((currentSecurity/minSecurity) * 100) - 100).toFixed(1);
+  let logLine =  `${scheduledHost.host} - ${scheduledHost.assignedProcedure}, ${scheduledHost.runningProcedures.length} running`;
+  logLine += `\n\t% max money: ${percentMaxMoney(ns, scheduledHost.host)}\n\t% over min sec: ${overMinSecPct}`;
   return logLine;
 }
 
