@@ -8,10 +8,11 @@ import { exploitSchedule } from 'lib/stages/exploit';
 import { prepareSchedule } from 'lib/stages/prepare';
 import { logger } from 'lib/logger';
 import { getControlledHostsWithMetadata } from 'lib/hosts';
-import { isAlreadyGrown, isAlreadyWeakened } from 'lib/metrics';
+import { isAlreadyGrown, isAlreadyWeakened, percentMaxMoney, percentOverMinSecurity } from 'lib/metrics';
 import { schedulerParameters } from 'config';
 import { execa } from 'lib/exec';
 import { writePortJson } from 'lib/port';
+import asTable from '/lib/ascii-table.js';
 
 let controlledHostCount = 0;
 let monitoredHost: string | undefined = undefined;
@@ -92,7 +93,10 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     // Math.floor(procedure.totalDuration / executionBufferMs)
     if (
       Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length && // We can fit more procedures in the time it takes it execute one divided by the execution buffer.
-      scheduledHostsArr.every((host) => host.runningProcedures.length >= scheduledHost.runningProcedures.length || (host.runningProcedures.length && (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length ))) {
+      scheduledHostsArr.every((host) => {
+        return scheduledHost.runningProcedures.length <= host.runningProcedures.length  || // 
+        (host.runningProcedures.length && (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length )
+      })) {
       procedureQueue.push({
         host,
         procedure,
@@ -128,6 +132,7 @@ export async function main(ns : NS) : Promise<void> {
   monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
   if (monitoredHost) execa(ns, 'batchMonitor.js', 'home', 1);
   controlledHostCount = 0;
+  execa(ns, 'kill-all.js', 'home', 1);
 
   while (true) {
     await ns.sleep(tickRate);
@@ -150,11 +155,10 @@ export async function main(ns : NS) : Promise<void> {
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
 
-    logger.info(ns, 'schedulerReport', `
-Scheduler Report ${new Date().toLocaleTimeString()}:
------------------
-${Array.from(scheduledHosts.values())
-      .map((scheduledHost) => logger.scheduledHostStatus(ns, scheduledHost))
-      .join('\n')}`);
+    const title = `Scheduler Report - ${new Date().toLocaleTimeString()}`;
+    const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures }) => {
+      return {host, procedure, '# running': runningProcedures.length, 'max. money %': percentMaxMoney(ns, host), '% > min. sec.': percentOverMinSecurity(ns, host)}
+    });
+    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`);
   }
 }
