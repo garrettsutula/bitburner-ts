@@ -7,6 +7,7 @@ const emptyPort = 'NULL PORT DATA'
 const jobStartPort = 1;
 const scriptStartPort = 2;
 const scriptEndPort = 3;
+const scriptCancelPort = 4;
 
 type BatchMap = Job[][];
 
@@ -50,6 +51,19 @@ async function processScriptEndEvents(ns: NS, batches: BatchMap) {
 }
 }
 
+async function processScriptCancelEvents(ns: NS, batches: BatchMap) {
+  while (ns.peek(scriptCancelPort) !== emptyPort) {
+    const event = readPortJson(ns, scriptCancelPort) as ScriptEndLog;
+    if (Object.keys(event).length) {
+    const runningJob = batches.find((batch) => batch.some((job) => job.batchId === event.batchId))?.find((job) => job.processId === event.processId);
+    if (runningJob) {
+      runningJob.endTimeActual = event.endTimeActual;
+      runningJob.cancelled = true;
+    }
+  }
+}
+}
+
 export async function main(ns : NS) : Promise<void> {
   ns.disableLog('ALL');
   const batches: BatchMap = [];
@@ -61,6 +75,7 @@ export async function main(ns : NS) : Promise<void> {
     await processSchedulerEvents(ns, batches);
     await processScriptStartEvents(ns, batches);
     await processScriptEndEvents(ns, batches);
+    await processScriptCancelEvents(ns, batches);
     const batchesArr = Array.from(batches.values()).map((jobs) => Array.from(jobs.values()));
     element = renderBatches(element, batchesArr, Date.now());
     logHTML(ns, element);
