@@ -8,9 +8,9 @@ import { exploitSchedule } from 'lib/stages/exploit';
 import { prepareSchedule } from 'lib/stages/prepare';
 import { logger } from 'lib/logger';
 import { getControlledHostsWithMetadata } from 'lib/hosts';
-import { isAlreadyGrown, isAlreadyWeakened, percentMaxMoney, percentOverMinSecurity } from 'lib/metrics';
+import { isAlreadyGrown, isAlreadyWeakened, percentMaxMoney, percentOverMinSecurity, percentMaxMoneyNum } from 'lib/metrics';
 import { schedulerParameters } from 'config';
-import { execa } from 'lib/exec';
+import { execa, kill } from 'lib/exec';
 import { writePortJson } from 'lib/port';
 import asTable from '/lib/ascii-table.js';
 
@@ -66,7 +66,7 @@ async function runProcedure(ns: NS, currentProcedure: QueuedProcedure, controlle
       endTime: Date.now() + step.duration + step.delay,
     });
     execa(ns, step.script, controlledServer.host, step.threadsNeeded, host, step.delay || 0, processId, batchId, host === monitoredHost ? 'monitor' : false);
-    newProcesses.push({ host: controlledServer.host, script: step.script, args: [ host, step.delay > 0 ? step.delay : 0, processId, step.ordinal ] });
+    newProcesses.push({ host: controlledServer.host, script: step.script, args: [  host, step.delay || 0, processId, batchId, host === monitoredHost ? 'monitor' : false ] });
   }
   return newProcesses;
 }
@@ -87,6 +87,19 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
     }
+
+    // If the server appears to be draining, cancel the next hack
+    if (scheduledHost.assignedProcedure === 'exploit' && percentMaxMoneyNum(ns, scheduledHost.host) < 0.70) {
+      const hackProcess = scheduledHost.runningProcedures[0]?.processes.find((process) => process.script.includes('hack'));
+      if (hackProcess) {
+        kill(ns, hackProcess.host, hackProcess.script, hackProcess.args);
+        await writePortJson(ns, 4, {
+          batchId: hackProcess.args[3],
+          processId: hackProcess.args[2],
+          endTimeActual: Date.now(),
+        });
+      }
+    } 
 
 
     const procedure = getProcedure(ns, scheduledHost);
