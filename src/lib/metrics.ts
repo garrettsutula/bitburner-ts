@@ -19,6 +19,10 @@ export function percentMaxMoney(ns: NS, host: string): string {
   return ((ns.getServerMoneyAvailable(host) / ns.getServerMaxMoney(host)) * 100).toFixed(2);
 }
 
+export function percentMaxMoneyNum(ns: NS, host: string): number {
+  return ((ns.getServerMoneyAvailable(host) / ns.getServerMaxMoney(host)) * 100);
+}
+
 export function percentOverMinSecurity(ns: NS, host: string): string {
   const minSecurity = ns.getServerSecurityLevel(host);
   const currentSecurity = ns.getServerSecurityLevel(host);
