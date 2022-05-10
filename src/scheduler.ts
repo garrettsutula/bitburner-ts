@@ -150,7 +150,7 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).slice(0,1);
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse();
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
