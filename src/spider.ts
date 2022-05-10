@@ -69,9 +69,14 @@ async function spider(ns: NS) {
 
   const controlledHostsArr = Array.from(controlledHosts.values());
   const scripts = ns.ls('home', '/scripts/').concat(...ns.ls('home', '/lib/'));
+  const doScriptUpdate = ns.fileExists('updateScripts.txt');
   for(const host of controlledHostsArr) {
-    await ns.scp(scripts, host);
+    const hasScripts = ns.ls(host, '/scripts/');
+    if (!hasScripts || doScriptUpdate) {
+      await ns.scp(scripts, host);
+    }
   }
+  ns.rm('scriptUpdate.txt');
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
