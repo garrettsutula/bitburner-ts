@@ -67,7 +67,7 @@ export function calculateStepsRamNeeded(steps: ProcedureStep[]): number {
 export function calculateStepsDuration(steps: ProcedureStep[]): number {
   const longestDurationStep = steps
   .reduce((longest, curr) => longest.duration > curr.duration ? longest : curr, {duration: 0} as ProcedureStep);
-  return longestDurationStep.duration + (stepBuffer * longestDurationStep.ordinal);
+  return longestDurationStep.duration + (stepBuffer * (steps.length - 1));
 }
 
 function calculateHackThreads(ns: NS, host: string, hackAmount: number) {

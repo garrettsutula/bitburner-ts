@@ -103,13 +103,13 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
 
     const procedure = getProcedure(ns, scheduledHost);
-    // Math.floor(procedure.totalDuration / executionBufferMs)
-    if (
-      Math.floor(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length && // We can fit more procedures in the time it takes it execute one divided by the execution buffer.
-      scheduledHostsArr.every((host) => {
-        return scheduledHost.runningProcedures.length <= host.runningProcedures.length  || // 
-        (host.runningProcedures.length && (host.runningProcedures[host.runningProcedures.length - 1].procedure.totalDuration / executionBufferMs) <= scheduledHost.runningProcedures.length )
-      })) {
+    const lastStartedProcedure = scheduledHost.runningProcedures[scheduledHost.runningProcedures.length - 1];
+
+    const belowMaxRunningInWindow = Math.ceil(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length;
+    const outsideExecutionBuffer = lastStartedProcedure ? (Date.now() + procedure.totalDuration) > (lastStartedProcedure.startTime + lastStartedProcedure.procedure.totalDuration + executionBufferMs) : true;
+    const fewerRunningThanEveryOtherHost = scheduledHost.runningProcedures.length === 0 || scheduledHostsArr.every((host) => scheduledHost.runningProcedures.length <= host.runningProcedures.length);
+    const lotsOfRamAvailable = true;
+    if ((belowMaxRunningInWindow && outsideExecutionBuffer) && (fewerRunningThanEveryOtherHost || lotsOfRamAvailable)) {
       procedureQueue.push({
         host,
         procedure,
@@ -150,7 +150,7 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse();
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).slice(0,1);
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
