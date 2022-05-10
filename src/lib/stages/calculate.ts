@@ -17,7 +17,7 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
 export function calculateGrow(ns: NS, ordinal: number, host: string, script: string, prepare = false): ProcedureStep {
   const duration = ns.getGrowTime(host);
   const maxMoney = ns.getServerMaxMoney(host);
-  const growthFactor = prepare ? prepareGrowthFactor : (maxMoney * 1.05) / ((maxMoney * (1 - hackPercentage)));
+  const growthFactor = prepare ? prepareGrowthFactor : (maxMoney) / (((maxMoney * hackPercentage) * (1 - hackPercentage)));
   // TODO: pass cores as param
   let threadsNeeded = 0;
   if (ns.formulas) {
