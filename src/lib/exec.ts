@@ -6,5 +6,5 @@ export function execa(ns : NS, fileName: string, hostName: string, threads = 1, 
 }
 
 export function kill(ns: NS, host: string, script: string, args: any[]): boolean {
-  return ns.kill(host, script, ...args);
+  return ns.kill(script, host, ...args);
 }
