@@ -55,7 +55,7 @@ async function spider(ns: NS) {
   let hosts: string[] = [];
   const seen = ['darkweb'].concat(purchasedServers);
   hosts.push('home');
-  ['home'].concat(purchasedServers).forEach((host) => controlledHosts.add(host));
+  purchasedServers.concat(['home']).forEach((host) => controlledHosts.add(host));
   while (hosts.length > 0) {
     const host = hosts.shift();
     if (host && !seen.includes(host)) {
@@ -72,11 +72,11 @@ async function spider(ns: NS) {
   const doScriptUpdate = ns.fileExists('updateScripts.txt');
   for(const host of controlledHostsArr) {
     const hasScripts = ns.ls(host, '/scripts/');
-    if (!hasScripts || doScriptUpdate) {
+    if (!hasScripts.length || doScriptUpdate) {
       await ns.scp(scripts, host);
     }
   }
-  ns.rm('scriptUpdate.txt');
+  if (doScriptUpdate) ns.rm('scriptUpdate.txt');
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
