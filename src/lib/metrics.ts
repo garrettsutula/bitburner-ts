@@ -5,7 +5,7 @@ const { maxServeryMoneyPercentage, maxSecurityThreshold } = calculationParameter
 
 export function isAlreadyWeakened(ns: NS, host: string): boolean {
   const currentSecurityLevel = ns.getServerSecurityLevel(host);
-  const minSecurityLevel = ns.getServerMinSecurityLevel(host)
+  const minSecurityLevel = ns.getServerMinSecurityLevel(host);
   return currentSecurityLevel < minSecurityLevel * maxSecurityThreshold;
 }
 
@@ -24,7 +24,7 @@ export function percentMaxMoneyNum(ns: NS, host: string): number {
 }
 
 export function percentOverMinSecurity(ns: NS, host: string): string {
-  const minSecurity = ns.getServerSecurityLevel(host);
+  const minSecurity = ns.getServerMinSecurityLevel(host);
   const currentSecurity = ns.getServerSecurityLevel(host);
   return (((currentSecurity/minSecurity) * 100) - 100).toFixed(1);
 }

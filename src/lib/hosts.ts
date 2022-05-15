@@ -12,3 +12,16 @@ export function getControlledHostsWithMetadata(ns: NS, hosts: string[]): Control
     };
   });
 }
+
+export function getHostWithMostRam(ns: NS, hosts: string[]): { host: string, availableRam: number } {
+  let highestAvailableRam = 0;
+  let highestHost = '';
+  const availableRam = hosts.map((host) => ns.getServerMaxRam(host) - ns.getServerUsedRam(host));
+  hosts.forEach((host, i) => {
+    if (highestAvailableRam < availableRam[i]) {
+      highestAvailableRam = availableRam[i]
+      highestHost = host;
+    }
+  })
+  return { host: highestHost, availableRam: highestAvailableRam };
+}

@@ -5,7 +5,7 @@ import { shortId } from 'lib/uuid';
 import { QueuedProcedure, ScheduledHost } from 'models/procedure';
 import { ControlledServers } from 'models/server';
 import { exploitSchedule } from 'lib/stages/exploit';
-import { prepareSchedule } from 'lib/stages/prepare';
+import { prepareSchedule } from '/lib/stages/prepare';
 import { logger } from 'lib/logger';
 import { getControlledHostsWithMetadata } from 'lib/hosts';
 import { isAlreadyGrown, isAlreadyWeakened, percentMaxMoney, percentOverMinSecurity, percentMaxMoneyNum } from 'lib/metrics';
@@ -13,6 +13,7 @@ import { schedulerParameters } from 'config';
 import { execa, kill } from 'lib/exec';
 import { writePortJson } from 'lib/port';
 import asTable from '/lib/ascii-table.js';
+import { weakenSchedule } from '/lib/stages/weaken';
 
 let controlledHostCount = 0;
 let monitoredHost: string | undefined = undefined;
@@ -21,7 +22,9 @@ const { tickRate, executionBufferMs } = schedulerParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
-  if (isAlreadyGrown(ns, host) && isAlreadyWeakened(ns, host)) {
+  const alreadyWeakened = isAlreadyWeakened(ns, host);
+  const alreadyGrown = isAlreadyGrown(ns, host);
+  if (alreadyWeakened && alreadyGrown) {
     scheduledHosts.set(host, {
       host,
       assignedProcedure: 'exploit',
@@ -29,7 +32,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
       queued: false,
     })
     return 'exploit';
-  } else {
+  } else if(alreadyWeakened) {
     scheduledHosts.set(host, {
       host,
       assignedProcedure: 'prepare',
@@ -37,11 +40,21 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
       queued: false,
     })
     return 'prepare';
+  } else {
+    scheduledHosts.set(host, {
+      host,
+      assignedProcedure: 'weaken',
+      runningProcedures: [],
+      queued: false,
+    })
+    return 'weaken';
   }
 }
 
 function getProcedure(ns: NS, {host, assignedProcedure}: ScheduledHost) {
   switch(assignedProcedure) {
+    case 'weaken':
+      return weakenSchedule(ns, host);
     case 'prepare':
       return prepareSchedule(ns, host);
     case 'exploit':
@@ -73,7 +86,7 @@ async function runProcedure(ns: NS, currentProcedure: QueuedProcedure, controlle
 
 async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], scheduledHosts: Map<string, ScheduledHost>) {
   const procedureQueue: QueuedProcedure[] = [];
-  const scheduledHostsArr = Array.from(scheduledHosts.values()).reverse();
+  const scheduledHostsArr = Array.from(scheduledHosts.values());
 
   for (const scheduledHost of scheduledHostsArr) {
     const host = scheduledHost.host;
@@ -83,13 +96,17 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     
     // Switch assigned procedure if needed.
     const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
+    const readyToGrow = isAlreadyWeakened(ns, host) && !isAlreadyGrown(ns, host);
     if (readyToExploit && scheduledHost.assignedProcedure === 'prepare') {
       ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
       scheduledHost.assignedProcedure = 'exploit';
+    } else if (readyToGrow && scheduledHost.assignedProcedure === 'weaken') {
+      ns.print(`INFO: ${host} switching from WEAKEN to PREPARE!`);
+      scheduledHost.assignedProcedure = 'prepare';
     }
 
     // If the server appears to be draining, cancel the next hack
-    if (scheduledHost.assignedProcedure === 'exploit' && percentMaxMoneyNum(ns, scheduledHost.host) < 0.70) {
+    if (scheduledHost.assignedProcedure === 'exploit' && ( percentMaxMoneyNum(ns, scheduledHost.host) < 0.70 || !isAlreadyWeakened(ns, scheduledHost.host))) {
       const hackProcess = scheduledHost.runningProcedures[0]?.processes.find((process) => process.script.includes('hack'));
       if (hackProcess) {
         kill(ns, hackProcess.host, hackProcess.script, hackProcess.args);
@@ -107,8 +124,8 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
     const belowMaxRunningInWindow = Math.ceil(procedure.totalDuration / executionBufferMs) > scheduledHost.runningProcedures.length;
     const outsideExecutionBuffer = lastStartedProcedure ? (Date.now() + procedure.totalDuration) > (lastStartedProcedure.startTime + lastStartedProcedure.procedure.totalDuration + executionBufferMs) : true;
-    const fewerRunningThanEveryOtherHost = scheduledHost.runningProcedures.length === 0 || scheduledHostsArr.every((host) => scheduledHost.runningProcedures.length <= host.runningProcedures.length);
-    const lotsOfRamAvailable = true;
+    const fewerRunningThanEveryOtherHost = scheduledHost.runningProcedures.length === 0 || scheduledHostsArr.every((host) => scheduledHost.runningProcedures.length < host.runningProcedures.length * 4);
+    const lotsOfRamAvailable = false;
     if ((belowMaxRunningInWindow && outsideExecutionBuffer) && (fewerRunningThanEveryOtherHost || lotsOfRamAvailable)) {
       procedureQueue.push({
         host,
@@ -150,7 +167,7 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]).reverse();
+    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.

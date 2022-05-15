@@ -1,4 +1,6 @@
 import { Process } from './process';
+import { Server } from '@ns'
+import { Args } from './utility'
 
 export type Task = "hack" | "grow" | "weaken" | "cancelled" | "desync" | "safe" | "unsafe";
 
@@ -17,13 +19,17 @@ export interface Job {
   batchId: string;
   processId: string;
   task: Task;
+  args: Args;
+  threads: number;
   duration: number;
-  startTime: number;
+  startDifficulty: number,
+  startTime?: number;
   startTimeActual?: number;
   endTime?: number;
   endTimeActual?: number;
   cancelled?: boolean;
-  result?: JobResult
+  change: { security: number, moneyMult: number, money: number, playerMoney: number }
+  result: Server
 }
 
 export interface JobStartLog {
@@ -49,12 +55,12 @@ export interface ScriptEndLog {
 }
 
 export interface JobResult {
-  hackDiffulty?: number;
+  hackDifficulty?: number;
   minDifficulty?: number;
 }
 
 export interface Procedure {
-  type: 'prepare' | 'exploit';
+  type: 'weaken' | 'prepare' | 'exploit';
   steps: ProcedureStep[];
   totalDuration: number;
   totalRamNeeded: number;
@@ -74,7 +80,7 @@ export interface RunningProcedure {
 
 export interface ScheduledHost {
   host: string;
-  assignedProcedure: 'prepare' | 'exploit';
+  assignedProcedure: 'weaken' | 'prepare' | 'exploit';
   runningProcedures: RunningProcedure[];
   queued: boolean;
 }

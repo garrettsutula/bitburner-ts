@@ -5,7 +5,7 @@ import { ControlledServers } from '/models/server';
 import { Args } from '/models/utility';
 
 export function killProcesses(ns: NS, processes: Process[]): boolean[] {
-  return processes.map(({ host, script, args }: {host: string, script: string, args: Args}) => ns.kill(script, host, ...args));
+  return processes.map(({ host, script, args }: {host: string, script: string, args: Args}) => ns.kill(script, host, ...(args as string[])));
 }
 
 export async function scheduleAcrossHosts(

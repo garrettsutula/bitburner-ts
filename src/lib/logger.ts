@@ -11,24 +11,33 @@ const knownLogIntervals: {[key: string]: any} = {
 }
 
 
-function log(ns: NS, id: string, message: string, logInterval: number, bypassLogInterval = false): void {
+function log(ns: NS, id: string, message: string, logInterval: number, bypassLogInterval = false, output: 'console' | 'log' = 'log'): void {
   const lastLogTime = lastLogMessage.has(id) ? lastLogMessage.get(id) as number : 0;
   if (bypassLogInterval || (lastLogTime + (knownLogIntervals[id] ? knownLogIntervals[id] : logInterval) <  Date.now())) {
     lastLogMessage.set(id, Date.now());
-    ns.tprint(message);
+    switch (output) {
+      default:
+      case 'log':
+        ns.print(message);
+        break;
+      case 'console':
+        ns.tprint(message);
+        break;
+    }
+    
   }
 }
 
-function info(ns: NS, id: string, message: string, bypassLogInterval?: boolean): void {
-  log(ns, id, `INFO: ${message}`, logIntervalMs, bypassLogInterval);
+function info(ns: NS, id: string, message: string, output: 'console' | 'log' = 'log', bypassLogInterval?: boolean): void {
+  log(ns, id, `INFO: ${message}`, logIntervalMs, bypassLogInterval, output);
 }
 
-function warn(ns: NS, id: string, message: string, bypassLogInterval?: boolean): void {
-  log(ns, id, `WARN: ${message}`, warnIntervalMs, bypassLogInterval);
+function warn(ns: NS, id: string, message: string, output: 'console' | 'log' = 'log', bypassLogInterval?: boolean): void {
+  log(ns, id, `WARN: ${message}`, warnIntervalMs, bypassLogInterval, output);
 }
 
-function error(ns: NS, id: string, message: string, bypassLogInterval?: boolean): void {
-  log(ns, id, `ERROR: ${message}`, errorIntervalMs, bypassLogInterval);
+function error(ns: NS, id: string, message: string, output: 'console' | 'log' = 'log', bypassLogInterval?: boolean): void {
+  log(ns, id, `ERROR: ${message}`, errorIntervalMs, bypassLogInterval, output);
 }
 
 function scheduledHostStatus(ns: NS, scheduledHost: ScheduledHost): string {
