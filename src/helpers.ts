@@ -29,7 +29,7 @@ export function formatNumberShort(num: number, maxSignificantFigures = 6, maxDec
     i += 1;
   }
   // TODO: A number like 9.999 once rounted to show 3 sig figs, will become 10.00, which is now 4 sig figs.
-  return ((sign < 0) ? "-" : "") + num.toFixed(Math.max(0, Math.min(maxDecimalPlaces, maxSignificantFigures - Math.floor(1 + Math.log10(num))))) + symbols[i];
+  return ((sign < 0) ? "-" : "") + (num || 0).toFixed(Math.max(0, Math.min(maxDecimalPlaces, maxSignificantFigures - Math.floor(1 + Math.log10(num))))) + symbols[i];
 }
 
 /** Convert a shortened number back into a value */
