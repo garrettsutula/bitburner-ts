@@ -9,7 +9,7 @@ export function calculateWeaken(ns: NS, ordinal: number, host: string, script: s
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = prepare ? (prepareGrowthFactor - 1)/0.05 : Math.ceil((securityLevel * 1.05) / (0.05));
+  const threadsNeeded = Math.max(prepare ? (prepareGrowthFactor - 1)/0.05 : Math.ceil((securityLevel * 1.05) / (0.05)), 1);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { task: 'weaken', ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
 }
