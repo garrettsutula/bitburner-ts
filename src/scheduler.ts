@@ -156,11 +156,12 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 }
 
 export async function main(ns : NS) : Promise<void> {
+  const [monitor] = ns.args as string[];
   disableLogs(ns);
   
   const scheduledHosts = new Map<string, ScheduledHost>();
   monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
-  if (monitoredHost) execa(ns, 'batchMonitor.js', 'home', 1);
+  if (monitoredHost && monitor) execa(ns, 'batchMonitor.js', 'home', 1);
   controlledHostCount = 0;
   execa(ns, 'kill-all.js', 'home', 1);
 
