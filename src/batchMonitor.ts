@@ -15,7 +15,7 @@ async function processSchedulerEvents(ns: NS, batches: BatchMap) {
   while (ns.peek(jobStartPort) !== emptyPort) {
     const event = readPortJson(ns, jobStartPort) as JobStartLog;
     if (Object.keys(event).length) {
-      const newJob: Job = { batchId: event.batchId, processId: event.processId, task: event.task, duration: event.duration, startTime: event.startTime, endTime: event.endTime, cancelled: false, result: {} };
+      const newJob: Job = { args: event.args, threads: event.threads, startDifficulty: event.startDifficulty, change: event.change, batchId: event.batchId, processId: event.processId, task: event.task, duration: event.duration, startTime: event.startTime, endTime: event.endTime, cancelled: false };
       const batch = batches.find((batch) => batch.some((job) => job.batchId === event.batchId));
       if (batch) {
          batch.push(newJob);

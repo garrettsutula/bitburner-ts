@@ -29,7 +29,7 @@ export interface Job {
   endTimeActual?: number;
   cancelled?: boolean;
   change: { security: number, moneyMult: number, money: number, playerMoney: number }
-  result: Server
+  result?: Server
 }
 
 export interface JobStartLog {
@@ -39,6 +39,10 @@ export interface JobStartLog {
   duration: number;
   startTime: number;
   endTime: number;
+  args: Args;
+  threads: number;
+  startDifficulty: number;
+  change: { security: number, moneyMult: number, money: number, playerMoney: number }
 }
 
 export interface ScriptStartLog {
@@ -51,7 +55,7 @@ export interface ScriptEndLog {
   batchId: string;
   processId: string;
   endTimeActual: number;
-  result: JobResult;
+  result: Server;
 }
 
 export interface JobResult {
