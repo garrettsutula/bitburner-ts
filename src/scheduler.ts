@@ -148,7 +148,6 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
             procedure: currentProcedure.procedure
           });
     } else {
-      logger.warn(ns, 'outOfMemory', `Out of Memory: was attempting to schedule ${currentProcedure.procedure.type}@${currentProcedure.host}, needed ${currentProcedure.procedure.totalRamNeeded.toFixed(0)}GB RAM. ${procedureQueue.length} remain in queue.`);
       break;
     }
   }
@@ -185,11 +184,11 @@ export async function main(ns : NS) : Promise<void> {
     });
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
-
+    ns.clearLog();
     const title = `Scheduler Report - ${new Date().toLocaleTimeString()}`;
     const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures }) => {
       return {host, procedure, '# running': runningProcedures.length, 'max. money %': percentMaxMoney(ns, host), '% > min. sec.': percentOverMinSecurity(ns, host)}
     });
-    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`);
+    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log', true);
   }
 }
