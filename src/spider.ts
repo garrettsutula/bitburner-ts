@@ -23,7 +23,7 @@ function prep(ns: NS, target: string, serverInfo: Server) {
   }
   if (stats.root) {
     rootedHosts.add(target);
-    controlledHosts.add(target);
+    if(!target.includes('hacknet-node')) controlledHosts.add(target);
     if (stats.moneyMax > 0) exploitableHosts.add(target);
     return true;
   }
