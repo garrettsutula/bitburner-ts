@@ -1,9 +1,9 @@
-import { NS } from '@ns';
+import { NS, BitNodeMultipliers, Player } from '@ns';
 import { readJson } from 'lib/file';
 import { disableLogs } from 'lib/logger';
 import { shortId } from 'lib/uuid';
 import { QueuedProcedure, ScheduledHost } from 'models/procedure';
-import { ControlledServers } from 'models/server';
+import { ControlledServers, ServerStats } from 'models/server';
 import { exploitSchedule } from 'lib/stages/exploit';
 import { prepareSchedule } from '/lib/stages/prepare';
 import { logger } from 'lib/logger';
@@ -17,6 +17,9 @@ import { weakenSchedule } from '/lib/stages/weaken';
 
 let controlledHostCount = 0;
 let monitoredHost: string | undefined = undefined;
+let bitnodeMults: BitNodeMultipliers;
+let playerInfo: Player;
+let serverInfo: { [key: string]: ServerStats } = {};
 
 const { tickRate, executionBufferMs } = schedulerParameters;
 
@@ -24,6 +27,7 @@ function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, Sc
   if (scheduledHosts.has(host)) return;
   const alreadyWeakened = isAlreadyWeakened(ns, host);
   const alreadyGrown = isAlreadyGrown(ns, host);
+  ns.getBitNodeMultipliers
   if (alreadyWeakened && alreadyGrown) {
     scheduledHosts.set(host, {
       host,
@@ -156,6 +160,7 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
 export async function main(ns : NS) : Promise<void> {
   const [monitor] = ns.args as string[];
+  serverInfo = readJson(ns, '/data/serverInfo.txt') as { [key: string]: ServerStats };
   disableLogs(ns);
   
   const scheduledHosts = new Map<string, ScheduledHost>();
@@ -166,8 +171,9 @@ export async function main(ns : NS) : Promise<void> {
 
   while (true) {
     await ns.sleep(tickRate);
-    const controlledHosts = readJson(ns, '/data/controlledHosts.txt') as string[]
-    const exploitableHosts = (readJson(ns, '/data/exploitableHosts.txt') as string[]);
+    const controlledHosts = ['home'].concat(Object.values(serverInfo).filter((server) => server.owned || (server.root && !server.name.includes('hacknet-node'))).map((server) => server.name));
+    const exploitableHosts = Object.values(serverInfo).filter((server) => server.moneyMax > 0 && server.root).map((server) => server.name);
+
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
     // Copy scripts to new hosts before we proceed further to make sure they can run scripts if we try.
@@ -184,11 +190,10 @@ export async function main(ns : NS) : Promise<void> {
     });
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
-    ns.clearLog();
     const title = `Scheduler Report - ${new Date().toLocaleTimeString()}`;
     const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures }) => {
-      return {host, procedure, '# running': runningProcedures.length, 'max. money %': percentMaxMoney(ns, host), '% > min. sec.': percentOverMinSecurity(ns, host)}
+      return {host, step: procedure, '#': runningProcedures.length, 'max. $ %': percentMaxMoney(ns, host), '% > goal sec.': percentOverMinSecurity(ns, host)}
     });
-    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log', true);
+    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log');
   }
 }

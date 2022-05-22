@@ -1,6 +1,7 @@
-import { NS } from '@ns'
+import { NS, BitNodeMultipliers, Player } from '@ns'
 import { ProcedureStep } from '/models/procedure';
 import { calculationParameters } from '/config';
+import { readJson } from '/lib/file';
 
 const { hackPercentage, stepBuffer, prepareGrowthFactor } = calculationParameters;
 
@@ -72,14 +73,14 @@ export function calculateStepsDuration(steps: ProcedureStep[]): number {
 
 function calculateHackThreads(ns: NS, host: string, hackAmount: number) {
   const balanceFactor = 240;
-  const bitnodeMultiplier = ns.getBitNodeMultipliers().HackingLevelMultiplier;
+  const bitnodeMultiplier = (readJson(ns, '/data/bitnodeInfo.txt') as BitNodeMultipliers).HackingLevelMultiplier;
   const currentMoney = ns.getServerMaxMoney(host);
   const hackDifficulty = ns.getServerMinSecurityLevel(host);
   const difficultyMultiplier = (100 - hackDifficulty) / 100;
   const hackingLevel = ns.getHackingLevel();
   const requiredHackingLevel = ns.getServerRequiredHackingLevel(host);
   const skillMultiplier = (hackingLevel - (requiredHackingLevel - 1)) / hackingLevel;
-  const {money: moneyMultiplier} = ns.getHackingMultipliers();
+  const moneyMultiplier = (readJson(ns, '/data/playerInfo.txt') as Player).hacking_money_mult;
   let percentMoneyHackedOneThread = (difficultyMultiplier * skillMultiplier * moneyMultiplier * bitnodeMultiplier) / balanceFactor;
   if ( percentMoneyHackedOneThread < 0) percentMoneyHackedOneThread = 0;
   if ( percentMoneyHackedOneThread > 1 ) percentMoneyHackedOneThread = 1;

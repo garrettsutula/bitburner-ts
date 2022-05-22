@@ -6,8 +6,10 @@ const lastLogMessage: Map<string, number> = new Map();
 const logIntervalMs = 1000 * 60;
 const warnIntervalMs = 1000 * 10;
 const errorIntervalMs = 1000 * 2;
-const knownLogIntervals: {[key: string]: any} = {
+const knownLogIntervals: {[key: string]: number} = {
   'outOfMemory': 1000 * 120,
+  'schedulerReport': 1000 * 3,
+  'spiderReport': 1000 * 5,
 }
 
 
