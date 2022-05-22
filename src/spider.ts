@@ -1,29 +1,28 @@
 import { NS } from '@ns'
 import { writeJson } from '/lib/file';
-import { disableLogs } from '/lib/logger';
+import { disableLogs, logger } from '/lib/logger';
+import asTable from '/lib/ascii-table.js';
+import { ServerStats } from '/models/server';
 // Managed by spider.js
 const discoveredHosts = new Set<string>();
 const rootedHosts = new Set<string>();
 const controlledHosts = new Set<string>();
 const exploitableHosts = new Set<string>();
-
-function hasMoney(ns: NS, host: string) {
-  return ns.getServerMaxMoney(host) > 0;
-}
+const serverStats: { [key: string]: ServerStats } = {};
 
 function prep(ns: NS, target: string) {
-  const requiredHackingLevel = ns.getServerRequiredHackingLevel(target);
+  const stats = new ServerStats(ns.getServer(target));
+  if(!stats.owned) serverStats[target] = stats;
   const currentHackingLevel = ns.getHackingLevel();
-  if (requiredHackingLevel
+  if (stats.reqHack
         > currentHackingLevel) {
     discoveredHosts.add(target);
-    ns.print(`SPIDER: Can't hack ${target} yet, required level: ${requiredHackingLevel}`);
     return false;
   }
-  if (ns.hasRootAccess(target)) {
+  if (stats.root) {
     rootedHosts.add(target);
     controlledHosts.add(target);
-    if (hasMoney(ns, target)) exploitableHosts.add(target);
+    if (stats.moneyMax > 0) exploitableHosts.add(target);
     return true;
   }
   function can(action: string) {
@@ -37,10 +36,10 @@ function prep(ns: NS, target: string) {
   if (can('httpworm')) { ns.httpworm(target); ports += 1; }
   if (can('sqlinject')) { ns.sqlinject(target); ports += 1; }
 
-  if (ports >= ns.getServerNumPortsRequired(target)) {
+  if (ports >= stats.reqPorts) {
     rootedHosts.add(target);
     controlledHosts.add(target);
-    if (hasMoney(ns, target)) exploitableHosts.add(target);
+    if (stats.moneyMax > 0) exploitableHosts.add(target);
     return ns.nuke(target);
   }
   discoveredHosts.add(target);
@@ -82,6 +81,10 @@ async function spider(ns: NS) {
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
   await writeJson(ns, '/data/controlledHosts.txt', Array.from(controlledHosts.values()));
   await writeJson(ns, '/data/exploitableHosts.txt', Array.from(exploitableHosts.values()));
+  await writeJson(ns, '/data/serverStats.txt', serverStats);
+  const title = `Spider Report - ${new Date().toLocaleTimeString()}`;
+  const reportTable = Object.values(serverStats).map(({name, root, reqHack, reqPorts, ram, ramUsed, sec, minSec, pctOverMin, moneyMaxShort, pctMoneyMax, growMult})=> Object.assign({}, {name, root, reqHack, reqPorts, ram, ramUsed, minSec,  '% > min. sec.': pctOverMin, maxMoney: moneyMaxShort, 'max. money %': pctMoneyMax, growMult}));
+  logger.info(ns, 'spiderReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'console', true);
 }
 
 export async function main(ns: NS) : Promise<void> {
