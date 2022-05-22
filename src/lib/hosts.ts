@@ -18,6 +18,7 @@ export function getHostWithMostRam(ns: NS, hosts: string[]): { host: string, ava
   let highestHost = '';
   const availableRam = hosts.map((host) => ns.getServerMaxRam(host) - ns.getServerUsedRam(host));
   hosts.forEach((host, i) => {
+    if (host === 'home') availableRam[i] = availableRam[i] - schedulerParameters.reserveHomeRamGb;
     if (highestAvailableRam < availableRam[i]) {
       highestAvailableRam = availableRam[i]
       highestHost = host;
