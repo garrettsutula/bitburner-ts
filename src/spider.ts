@@ -76,7 +76,7 @@ async function spider(ns: NS) {
   for(const host of controlledHostsArr) {
     const hasScripts = ns.ls(host, '/scripts/');
     if (!hasScripts.length || doScriptUpdate) {
-      await getNsDataThroughFile(ns, ` ns.scp(${JSON.stringify(scripts)}, "${host}")`, `/Temp/scp-${host}.txt`);
+      await getNsDataThroughFile(ns, `ns.scp(${JSON.stringify(scripts)}, "${host}")`, `/Temp/scp-${host}.txt`);
     }
   }
   if (doScriptUpdate) await getNsDataThroughFile(ns, 'ns.rm("scriptUpdate.txt")', '/Temp/rmfile.txt');
