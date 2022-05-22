@@ -11,12 +11,13 @@ export async function main(ns : NS) : Promise<void> {
   const skills: Array<'agility' | 'strength' | 'defense' | 'dexterity'> = ['agility', 'strength', 'defense', 'dexterity'];
   const targetLevel = (ns.args[0] as number) || 100;
   while (!atTargetLevel(ns.getPlayer(), targetLevel)) {
-    if (ns.getPlayer()[skills[0]] >= targetLevel) {
-      skills.shift();
+    if(ns.getPlayer()[skills[0]] <= targetLevel) {
       ns.singularity.gymWorkout('powerhouse gym', skills[0]);
     } else {
-      if (!ns.singularity.isBusy()) ns.singularity.gymWorkout('powerhouse gym', skills[0]);
+      skills.shift();
     }
     await ns.sleep(1000);
   }
+  ns.stopAction();
+  ns.exit();
 } 
