@@ -1,8 +1,10 @@
-import { NS } from '@ns'
+import { NS, Server } from '@ns'
 import { writeJson } from '/lib/file';
 import { disableLogs, logger } from '/lib/logger';
 import asTable from '/lib/ascii-table.js';
 import { ServerStats } from '/models/server';
+import { getNsDataThroughFile } from '/helpers';
+
 // Managed by spider.js
 const discoveredHosts = new Set<string>();
 const rootedHosts = new Set<string>();
@@ -10,8 +12,8 @@ const controlledHosts = new Set<string>();
 const exploitableHosts = new Set<string>();
 const serverStats: { [key: string]: ServerStats } = {};
 
-function prep(ns: NS, target: string) {
-  const stats = new ServerStats(ns.getServer(target));
+function prep(ns: NS, target: string, serverInfo: Server) {
+  const stats = new ServerStats(serverInfo);
   if(!stats.owned) serverStats[target] = stats;
   const currentHackingLevel = ns.getHackingLevel();
   if (stats.reqHack
@@ -50,7 +52,7 @@ async function spider(ns: NS) {
   discoveredHosts.clear();
   rootedHosts.clear();
   controlledHosts.clear();
-  const purchasedServers = ns.getPurchasedServers();
+  const purchasedServers: string[] = await getNsDataThroughFile(ns, 'ns.getPurchasedServers()', '/Temp/purchased-server-info.txt')
   let hosts: string[] = [];
   const seen = ['darkweb'].concat(purchasedServers);
   hosts.push('home');
@@ -59,8 +61,10 @@ async function spider(ns: NS) {
     const host = hosts.shift();
     if (host && !seen.includes(host)) {
       seen.push(host);
+      let serverInfo;
+      if (host !== 'home') serverInfo = await getNsDataThroughFile(ns, `ns.getServer("${host}")`, `/Temp/server.${host}.txt`);
       // If we can root the host, scan and add the hosts we find to the hosts crawl list.
-      if (host === 'home' || prep(ns, host)) {
+      if (host === 'home' || prep(ns, host, serverInfo)) {
         hosts = hosts.concat(ns.scan(host));
       }
     }
@@ -72,10 +76,10 @@ async function spider(ns: NS) {
   for(const host of controlledHostsArr) {
     const hasScripts = ns.ls(host, '/scripts/');
     if (!hasScripts.length || doScriptUpdate) {
-      await ns.scp(scripts, host);
+      await getNsDataThroughFile(ns, ` ns.scp(${JSON.stringify(scripts)}, "${host}")`, `/Temp/scp-${host}.txt`);
     }
   }
-  if (doScriptUpdate) ns.rm('scriptUpdate.txt');
+  if (doScriptUpdate) await getNsDataThroughFile(ns, 'ns.rm("scriptUpdate.txt")', '/Temp/rmfile.txt');
 
   await writeJson(ns, '/data/discoveredHosts.txt', Array.from(discoveredHosts.values()));
   await writeJson(ns, '/data/rootedHosts.txt', Array.from(rootedHosts.values()));
@@ -84,7 +88,8 @@ async function spider(ns: NS) {
   await writeJson(ns, '/data/serverStats.txt', serverStats);
   const title = `Spider Report - ${new Date().toLocaleTimeString()}`;
   const reportTable = Object.values(serverStats).map(({name, root, reqHack, reqPorts, ram, ramUsed, sec, minSec, pctOverMin, moneyMaxShort, pctMoneyMax, growMult})=> Object.assign({}, {name, root, reqHack, reqPorts, ram, ramUsed, minSec,  '% > min. sec.': pctOverMin, maxMoney: moneyMaxShort, 'max. money %': pctMoneyMax, growMult}));
-  logger.info(ns, 'spiderReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'console', true);
+  ns.clearLog();
+  logger.info(ns, 'spiderReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log', true);
 }
 
 export async function main(ns: NS) : Promise<void> {
