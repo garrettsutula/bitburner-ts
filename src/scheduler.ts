@@ -160,7 +160,6 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
 
 export async function main(ns : NS) : Promise<void> {
   const [monitor] = ns.args as string[];
-  serverInfo = readJson(ns, '/data/serverInfo.txt') as { [key: string]: ServerStats };
   disableLogs(ns);
   
   const scheduledHosts = new Map<string, ScheduledHost>();
@@ -171,6 +170,7 @@ export async function main(ns : NS) : Promise<void> {
 
   while (true) {
     await ns.sleep(tickRate);
+    serverInfo = readJson(ns, '/data/serverInfo.txt') as { [key: string]: ServerStats };
     const controlledHosts = ['home'].concat(Object.values(serverInfo).filter((server) => server.owned || (server.root && !server.name.includes('hacknet-node'))).map((server) => server.name));
     const exploitableHosts = Object.values(serverInfo).filter((server) => server.moneyMax > 0 && server.root).map((server) => server.name);
 
