@@ -68,7 +68,7 @@ async function spider(ns: NS) {
 
   await writeJson(ns, '/data/serverInfo.txt', serverInfo);
   const title = `Spider Report - ${new Date().toLocaleTimeString()}`;
-  const reportTable = Object.values(serverInfo).map(({name, root, reqHack, reqPorts, ram, ramUsed, minSec, pctOverMin, moneyMaxShort, pctMoneyMax, growMult})=> Object.assign({}, {name, root, reqHack, reqPorts, ram, ramUsed, minSec,  '% > min. sec.': pctOverMin, maxMoney: moneyMaxShort, 'max. money %': pctMoneyMax, growMult}));
+  const reportTable = Object.values(serverInfo).map(({name, root, reqHack, reqPorts, ram, ramUsed, sec, minSec, pctOverMin, moneyMaxShort, pctMoneyMax, growMult})=> Object.assign({}, {name, root, 'req (p|h)': `${reqPorts} | ${reqHack}`, 'ram (u/t)': `${ramUsed} / ${ram}`, 'sec (% | c/m)':  `${pctOverMin}% | ${sec}/${minSec}`, 'money (% | max)': `${pctMoneyMax}% | ${moneyMaxShort}`, growMult}));
   logger.info(ns, 'spiderReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log');
 }
 
