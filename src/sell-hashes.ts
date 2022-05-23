@@ -32,6 +32,11 @@ function getHashItem(ns: NS, name: string, target: string) {
       return 'Reduce Minimum Security';
     case 'serverMax':
       return 'Increase Maximum Money';
+    case 'bbRank':
+      return 'Exchange for Bladeburner Rank';
+    case 'bbSp':
+    case 'bbSP':
+      return 'Exchange for Bladeburner SP';
   }
 }
 
@@ -43,6 +48,7 @@ export async function main(ns : NS) : Promise<void> {
     if (ns.hacknet.numHashes() > ns.hacknet.hashCost(purchasedItem)) {
       while(ns.hacknet.numHashes() > ns.hacknet.hashCost(purchasedItem)) {
         ns.hacknet.spendHashes(purchasedItem, target);
+        await ns.sleep(10);
       }
     }
     await ns.sleep(10000);
