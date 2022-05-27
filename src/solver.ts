@@ -1,13 +1,14 @@
 import { NS } from '@ns'
 import { readJson } from '/lib/file';
+import { ServerStats } from '/models/server';
 
 export async function main(ns : NS) : Promise<void> {
-  const contracts = readJson(ns, '/data/controlledHosts.txt').flatMap((server: string): string[] => {
-    const onServer = ns.ls(server, '.cct').map((contract): string => {
-      const type = ns.codingcontract.getContractType(contract, server);
-      const data = ns.codingcontract.getData(contract, server);
-      const didSolve = solve(type, data, server, contract, ns);
-      return `${server} - ${contract} - ${type} - ${didSolve || 'FAILED!'}`;
+  const contracts = Object.values(readJson(ns, '/data/serverInfo.txt')).flatMap((server: ServerStats): string[] => {
+    const onServer = ns.ls(server.name, '.cct').map((contract): string => {
+      const type = ns.codingcontract.getContractType(contract, server.name);
+      const data = ns.codingcontract.getData(contract, server.name);
+      const didSolve = solve(type, data, server.name, contract, ns);
+      return `${server.name} - ${contract} - ${type} - ${didSolve || 'FAILED!'}`;
     });
     return onServer;
   });
