@@ -33,6 +33,7 @@ export function autocomplete(data: any, _: any): Array<any> {
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
+    ns.tail();
     const options = ns.flags(argsSchema);
     const continuous = options.c || options.continuous;
     const interval = options.interval;
