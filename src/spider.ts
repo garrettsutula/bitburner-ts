@@ -10,7 +10,7 @@ const serverInfo: { [key: string]: ServerStats } = {};
 
 function prep(ns: NS, target: string, targetServer: Server) {
   const targetInfo = new ServerStats(targetServer);
-  if(!targetInfo.owned) serverInfo[target] = targetInfo;
+  serverInfo[target] = targetInfo;
   const currentHackingLevel = ns.getHackingLevel();
   if (targetInfo.reqHack
         > currentHackingLevel) {
