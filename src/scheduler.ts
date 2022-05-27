@@ -171,7 +171,7 @@ export async function main(ns : NS) : Promise<void> {
   while (true) {
     await ns.sleep(tickRate);
     serverInfo = readJson(ns, '/data/serverInfo.txt') as { [key: string]: ServerStats };
-    const controlledHosts = ['home'].concat(Object.values(serverInfo).filter((server) => server.owned || (server.root && !server.name.includes('hacknet-node'))).map((server) => server.name));
+    const controlledHosts = ['home'].concat(Object.values(serverInfo).filter((server) => (server.owned && !server.name.includes('hacknet-node') || (!server.owned && server.root))).map((server) => server.name));
     const exploitableHosts = Object.values(serverInfo).filter((server) => server.moneyMax > 0 && server.root).map((server) => server.name);
 
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
@@ -191,8 +191,8 @@ export async function main(ns : NS) : Promise<void> {
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
     const title = `Scheduler Report - ${new Date().toLocaleTimeString()}`;
-    const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures }) => {
-      return {host, step: procedure, '#': runningProcedures.length, 'max. $ %': percentMaxMoney(ns, host), '% > goal sec.': percentOverMinSecurity(ns, host)}
+    const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures  }) => {
+      return {host, step: procedure, '#': runningProcedures.length, 'max. $ %': percentMaxMoney(ns, host), '% > goal sec.': percentOverMinSecurity(ns, host), ram: runningProcedures.length > 0 ? runningProcedures[0].procedure.totalRamNeeded.toFixed(1) : 0}
     });
     logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log');
   }
