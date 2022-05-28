@@ -20,8 +20,9 @@ let monitoredHost: string | undefined = undefined;
 let bitnodeMults: BitNodeMultipliers;
 let playerInfo: Player;
 let serverInfo: { [key: string]: ServerStats } = {};
+const possiblyDesynced: Map<string, number> = new Map();
 
-const { tickRate, executionBufferMs } = schedulerParameters;
+const { tickRate, executionBufferMs, desyncWatchThreshold } = schedulerParameters;
 
 function setInitialSchedule(ns: NS, host: string, scheduledHosts: Map<string, ScheduledHost>) {
   if (scheduledHosts.has(host)) return;
@@ -102,11 +103,24 @@ async function queueAndExecuteProcedures(ns:NS, controlledHosts: string[], sched
     const readyToExploit = isAlreadyWeakened(ns, host) && isAlreadyGrown(ns, host);
     const readyToGrow = isAlreadyWeakened(ns, host) && !isAlreadyGrown(ns, host);
     if (readyToExploit && scheduledHost.assignedProcedure === 'prepare') {
-      ns.print(`INFO: ${host} switching from PREPARE to EXPLOIT!`);
+      logger.info(ns, 'changeProcedure', `${host} switching from PREPARE to EXPLOIT!`, 'console', true);
       scheduledHost.assignedProcedure = 'exploit';
+      possiblyDesynced.delete(host);
     } else if (readyToGrow && scheduledHost.assignedProcedure === 'weaken') {
-      ns.print(`INFO: ${host} switching from WEAKEN to PREPARE!`);
+      logger.info(ns, 'changeProcedure', `${host} switching from WEAKEN to PREPARE!`, 'console', true);
       scheduledHost.assignedProcedure = 'prepare';
+      possiblyDesynced.delete(host);
+    } else if (!readyToExploit && !readyToGrow && scheduledHost.assignedProcedure !== 'weaken'){
+      let desyncWatchCount = possiblyDesynced.get(host);
+      if((desyncWatchCount || 0) > desyncWatchThreshold) {
+        logger.warn(ns, 'changeProcedure', `${host} switching from PREPARE to WEAKEN after hitting desync threshold!`, 'console', true);
+        scheduledHost.assignedProcedure = 'weaken';
+      } else if (desyncWatchCount) {
+        desyncWatchCount += 1;
+        possiblyDesynced.set(host, desyncWatchCount);
+      } else {
+        possiblyDesynced.set(host, 1);
+      }
     }
 
     // If the server appears to be draining, cancel the next hack

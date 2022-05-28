@@ -3,14 +3,14 @@ import { ProcedureStep } from '/models/procedure';
 import { calculationParameters } from '/config';
 import { readJson } from '/lib/file';
 
-const { hackPercentage, stepBuffer, prepareGrowthFactor } = calculationParameters;
+const { hackPercentage, stepBuffer, prepareGrowthFactor, weakenFactor } = calculationParameters;
 
 export function calculateWeaken(ns: NS, ordinal: number, host: string, script: string, securityLevelDecrease?: number, prepare = false): ProcedureStep {
   const duration = ns.getWeakenTime(host);
   const currentSecurity = ns.getServerSecurityLevel(host);
   const minLevel = ns.getServerMinSecurityLevel(host);
   const securityLevel = securityLevelDecrease || currentSecurity - minLevel;
-  const threadsNeeded = Math.max(prepare ? (prepareGrowthFactor - 1)/0.05 : Math.ceil((securityLevel * 1.05) / (0.05)), 1);
+  const threadsNeeded = Math.max(prepare ? (weakenFactor - 1)/0.05 : Math.ceil((securityLevel * 1.05) / (0.05)), 1);
   const ramNeeded = ns.getScriptRam(script) * threadsNeeded;
   return { task: 'weaken', ordinal, script, duration, threadsNeeded, ramNeeded, delay: 0 }
 }
