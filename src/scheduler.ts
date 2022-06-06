@@ -186,7 +186,7 @@ export async function main(ns : NS) : Promise<void> {
     await ns.sleep(tickRate);
     serverInfo = readJson(ns, '/data/serverInfo.txt') as { [key: string]: ServerStats };
     const controlledHosts = ['home'].concat(Object.values(serverInfo).filter((server) => (server.owned && !server.name.includes('hacknet-node') || (!server.owned && server.root))).map((server) => server.name));
-    const exploitableHosts = Object.values(serverInfo).filter((server) => server.moneyMax > 0 && server.root).map((server) => server.name);
+    const exploitableHosts = Object.values(serverInfo).filter((server) => server.moneyMax > 0 && server.root).map((server) => server.name).reverse();
 
     monitoredHost = (readJson(ns, '/data/monitoredHost.txt') as string[])[0];
 
