@@ -204,10 +204,11 @@ export async function main(ns : NS) : Promise<void> {
     });
 
     await queueAndExecuteProcedures(ns, controlledHosts, scheduledHosts);
+    ns.clearLog();
     const title = `Scheduler Report - ${new Date().toLocaleTimeString()}`;
     const reportTable = Array.from(scheduledHosts.values()).map(({host, assignedProcedure: procedure, runningProcedures  }) => {
       return {host, step: procedure, '#': runningProcedures.length, 'max. $ %': percentMaxMoney(ns, host), '% > goal sec.': percentOverMinSecurity(ns, host), ram: runningProcedures.length > 0 ? runningProcedures[0].procedure.totalRamNeeded.toFixed(1) : 0}
     });
-    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log');
+    logger.info(ns, 'schedulerReport', `\n${title}\n${asTable.configure({delimiter: ' | '})(reportTable)}`, 'log', true);
   }
 }
