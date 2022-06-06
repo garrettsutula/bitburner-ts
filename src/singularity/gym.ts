@@ -12,9 +12,10 @@ export async function main(ns : NS) : Promise<void> {
   const targetLevel = (ns.args[0] as number) || 100;
   while (!atTargetLevel(ns.getPlayer(), targetLevel)) {
     if(ns.getPlayer()[skills[0]] <= targetLevel) {
-      ns.singularity.gymWorkout('powerhouse gym', skills[0]);
+      if(!ns.singularity.isBusy()) ns.singularity.gymWorkout('powerhouse gym', skills[0]);
     } else {
       skills.shift();
+      ns.singularity.gymWorkout('powerhouse gym', skills[0]);
     }
     await ns.sleep(1000);
   }
